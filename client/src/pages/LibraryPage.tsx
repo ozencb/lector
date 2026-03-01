@@ -3,6 +3,7 @@ import { PlusIcon } from '@radix-ui/react-icons';
 import type { Book } from '@tts-reader/shared';
 import { deleteBook, listBooks, uploadBook } from '../services/api.js';
 import BookCard from '../components/BookCard.js';
+import ThemeToggle from '../components/ThemeToggle.js';
 import styles from './LibraryPage.module.scss';
 
 export default function LibraryPage() {
@@ -54,6 +55,7 @@ export default function LibraryPage() {
     <div className={styles.page}>
       <div className={styles.header}>
         <h1 className={styles.heading}>Library</h1>
+        <ThemeToggle />
         <input
           ref={fileInputRef}
           type="file"

@@ -67,7 +67,7 @@
 .dialogOverlay {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.5);
+  background: var(--color-overlay);
 }
 
 .dialogContent {
@@ -118,7 +118,7 @@
 
 .chapterItemActive {
   background: var(--color-accent);
-  color: #fff;
+  color: var(--color-accent-text);
 
   &:hover {
     background: var(--color-accent-hover);
@@ -273,7 +273,7 @@
   border: none;
   border-radius: 50%;
   background: var(--color-accent);
-  color: #fff;
+  color: var(--color-accent-text);
   transition: background 0.15s;
   -webkit-tap-highlight-color: transparent;
 
@@ -286,7 +286,7 @@
 .pickerOverlay {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.4);
+  background: var(--color-overlay);
   animation: fadeIn 0.2s ease;
 }
 
@@ -341,8 +341,8 @@
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
-  background: rgba(0, 0, 0, 0.75);
-  color: #fff;
+  background: var(--color-overlay-heavy);
+  color: var(--color-accent-text);
   font-size: 1.5rem;
   font-weight: 600;
   padding: 12px 24px;

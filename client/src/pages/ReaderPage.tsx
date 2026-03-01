@@ -12,6 +12,7 @@ import {
 import * as Dialog from '@radix-ui/react-dialog';
 import * as Switch from '@radix-ui/react-switch';
 import WheelPicker from '../components/WheelPicker.js';
+import ThemeToggle from '../components/ThemeToggle.js';
 import type { BookDetail, ChapterDetail } from '@tts-reader/shared';
 import { getBook, getChapter, getProgress, updateProgress, updateProgressBeacon } from '../services/api.js';
 import { useTTS } from '../hooks/useTTS.js';
@@ -383,6 +384,7 @@ export default function ReaderPage() {
             </Dialog.Content>
           </Dialog.Portal>
         </Dialog.Root>
+        <ThemeToggle />
         <label className={styles.focusToggle}>
           <span className={styles.focusLabel}>Focus</span>
           <Switch.Root
