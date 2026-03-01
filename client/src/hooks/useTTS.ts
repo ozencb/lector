@@ -20,6 +20,15 @@ function findVoiceByKey(voices: SpeechSynthesisVoice[], key: string): SpeechSynt
   return voices.find(v => `${v.name}::${v.lang}` === key) ?? null;
 }
 
+/**
+ * The Web Speech API rate property scales non-linearly — small increases
+ * produce disproportionately large perceived speed changes. This dampens
+ * the deviation from 1.0 so user-facing labels feel accurate.
+ */
+function adjustRate(rate: number): number {
+  return 1 + (rate - 1) * 0.5;
+}
+
 export function useTTS({ text, onEnd }: UseTTSOptions) {
   const [isPlaying, setIsPlaying] = useState(false);
   const [speed, setSpeed] = useState(1.0);
@@ -64,7 +73,7 @@ export function useTTS({ text, onEnd }: UseTTSOptions) {
     const gen = ++speakGenRef.current;
     speechSynthesis.cancel();
     const utterance = new SpeechSynthesisUtterance(sentence);
-    utterance.rate = rate;
+    utterance.rate = adjustRate(rate);
     if (selectedVoiceRef.current) {
       utterance.voice = selectedVoiceRef.current;
     }
