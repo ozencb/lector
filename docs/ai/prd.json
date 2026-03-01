@@ -1,0 +1,364 @@
+{
+  "project": "TTS Reader",
+  "branchName": "ralph/initial-build",
+  "description": "Minimalist epub reader with sentence-level TTS, focus mode, and progression tracking",
+  "techStack": {
+    "frontend": "React 19 + Vite + TypeScript + Radix UI + SCSS",
+    "backend": "Node.js + Fastify + TypeScript",
+    "database": "SQLite via better-sqlite3",
+    "tts": "Web Speech API",
+    "monorepo": "pnpm workspaces",
+    "deployment": "Docker + docker-compose"
+  },
+  "userStories": [
+    {
+      "id": "US-001",
+      "title": "Scaffold monorepo with pnpm workspaces",
+      "description": "Set up the project skeleton: root package.json with pnpm workspaces, client (React+Vite) and server (Fastify) packages, shared types package, TypeScript configs.",
+      "acceptanceCriteria": [
+        "Root package.json with pnpm workspaces pointing to client/, server/, shared/",
+        "client/ has React 19 + Vite + TypeScript scaffolded (vite create react-ts or manual). Radix UI and sass installed as dependencies",
+        "server/ has Fastify + TypeScript with tsx for dev. Dependencies: fastify, @fastify/multipart, @fastify/static, @fastify/cors, better-sqlite3, uuid, epub2 (for epub parsing), sbd (sentence boundary detection). Dev deps: tsx, typescript, @types/better-sqlite3, @types/uuid, @types/sbd",
+        "shared/ has a types.ts exporting shared interfaces (Book, Chapter, Sentence, Progress)",
+        "Root tsconfig.json with project references to all three packages",
+        "Each package has its own tsconfig.json with proper extends and paths",
+        "pnpm install succeeds without errors",
+        "npx tsc --noEmit passes in root (or each package individually)",
+        "client dev server starts with pnpm --filter client dev",
+        "server dev server starts with pnpm --filter server dev (can just log 'server started' for now)"
+      ],
+      "priority": 1,
+      "passes": true,
+      "notes": "Use epub2 package (not epubjs) for server-side epub parsing. The shared package should export types only, no runtime code."
+    },
+    {
+      "id": "US-002",
+      "title": "Database schema and initialization",
+      "description": "Create SQLite database with tables for books, chapters, sentences, and progress. Initialize on server startup.",
+      "acceptanceCriteria": [
+        "server/src/db.ts exports a function that initializes SQLite DB at data/tts-reader.db",
+        "Creates data/ directory if it doesn't exist",
+        "Creates tables with IF NOT EXISTS: books (id TEXT PK, title TEXT, author TEXT, cover_path TEXT, file_path TEXT, created_at INTEGER), chapters (id TEXT PK, book_id TEXT FK, idx INTEGER, title TEXT), sentences (id TEXT PK, chapter_id TEXT FK, idx INTEGER, text TEXT), progress (book_id TEXT PK FK, sentence_id TEXT FK, updated_at INTEGER)",
+        "Indexes on: chapters(book_id), sentences(chapter_id), progress(book_id)",
+        "DB is initialized when server starts (call init in server entry point)",
+        "Server starts successfully and creates the DB file",
+        "TypeScript compiles without errors"
+      ],
+      "priority": 2,
+      "passes": true,
+      "notes": "Use INTEGER for timestamps (unix epoch). Use TEXT for UUIDs. The data/ directory should be gitignored."
+    },
+    {
+      "id": "US-003",
+      "title": "Epub upload and parsing endpoint",
+      "description": "POST /api/books endpoint that accepts epub file upload, parses it into chapters and sentences, stores everything in DB and filesystem.",
+      "acceptanceCriteria": [
+        "POST /api/books accepts multipart file upload (epub file)",
+        "Saves raw epub to data/books/{id}.epub",
+        "Parses epub using epub2: extracts title, author, cover image",
+        "Cover image saved to data/covers/{id}.jpg (or png) if present",
+        "Extracts chapters in order with titles from epub TOC/spine",
+        "Each chapter's HTML content is stripped to plain text",
+        "Plain text is split into sentences using sbd library",
+        "All data inserted into DB: book record, chapter records (with idx for ordering), sentence records (with idx for ordering)",
+        "Returns created book object as JSON: { id, title, author, coverPath, totalChapters, totalSentences }",
+        "Returns 400 if file is not an epub or is missing",
+        "TypeScript compiles without errors",
+        "Test with a real epub file: curl -F 'file=@test.epub' http://localhost:3000/api/books returns valid JSON"
+      ],
+      "priority": 3,
+      "passes": true,
+      "notes": "epub2 provides getChapter() for HTML content. Use a simple HTML-to-text approach (regex strip tags or a lightweight lib). sbd.sentences(text) returns array of sentences. Filter out empty sentences. Register @fastify/multipart plugin."
+    },
+    {
+      "id": "US-004",
+      "title": "Book listing and detail API endpoints",
+      "description": "GET /api/books (list all) and GET /api/books/:id (single book with chapters) and DELETE /api/books/:id.",
+      "acceptanceCriteria": [
+        "GET /api/books returns array of books with fields: id, title, author, coverPath, createdAt, totalChapters, totalSentences, progress (current sentence index / total sentences, or null if no progress)",
+        "GET /api/books/:id returns book with nested chapters array: { id, title, author, coverPath, chapters: [{ id, idx, title, sentenceCount }] }",
+        "GET /api/books/:id returns 404 if book not found",
+        "DELETE /api/books/:id removes book, all chapters, all sentences, progress from DB. Removes epub file and cover from disk",
+        "DELETE /api/books/:id returns 204 on success, 404 if not found",
+        "TypeScript compiles without errors"
+      ],
+      "priority": 4,
+      "passes": true,
+      "notes": "For the book list, compute progress as a percentage using a JOIN or subquery. Cover path should be relative (e.g., /api/covers/{id}.jpg)."
+    },
+    {
+      "id": "US-005",
+      "title": "Chapter sentences and progress API endpoints",
+      "description": "GET /api/chapters/:id (all sentences for a chapter), GET/PUT /api/books/:id/progress.",
+      "acceptanceCriteria": [
+        "GET /api/chapters/:id returns { id, bookId, idx, title, sentences: [{ id, idx, text }] } ordered by idx",
+        "GET /api/chapters/:id returns 404 if chapter not found",
+        "GET /api/books/:id/progress returns { bookId, sentenceId, chapterId, chapterIdx, sentenceIdx, updatedAt } or 404 if no progress saved",
+        "PUT /api/books/:id/progress accepts JSON body { sentenceId } and upserts progress record",
+        "PUT /api/books/:id/progress returns the updated progress object (same shape as GET)",
+        "Returns 400 if sentenceId is missing or invalid (doesn't exist in DB)",
+        "TypeScript compiles without errors"
+      ],
+      "priority": 5,
+      "passes": true,
+      "notes": "Progress GET should resolve the chapter info from the sentence's chapter_id so client knows which chapter to load."
+    },
+    {
+      "id": "US-006",
+      "title": "Static file serving for covers and SPA",
+      "description": "Serve cover images and the built client SPA from Fastify.",
+      "acceptanceCriteria": [
+        "GET /api/covers/:filename serves files from data/covers/ directory",
+        "Serves with correct Content-Type (image/jpeg, image/png)",
+        "Returns 404 for missing covers",
+        "In production mode, serves client/dist/ as static files for all non-/api routes (SPA fallback)",
+        "In development mode, does not serve static files (Vite dev server handles it)",
+        "@fastify/static registered for cover serving",
+        "@fastify/cors registered for development (allow localhost:5173)",
+        "TypeScript compiles without errors"
+      ],
+      "priority": 6,
+      "passes": true,
+      "notes": "Use @fastify/static with wildcard option for SPA fallback. CORS only needed in dev when client runs on different port."
+    },
+    {
+      "id": "US-007",
+      "title": "Client: routing and layout shell",
+      "description": "Set up React Router with two routes: Library (/) and Reader (/read/:bookId). Create the app shell layout.",
+      "acceptanceCriteria": [
+        "react-router-dom installed and configured with BrowserRouter",
+        "Route / renders LibraryPage component",
+        "Route /read/:bookId renders ReaderPage component",
+        "Both pages render placeholder content for now",
+        "Global SCSS with CSS reset, base font (system font stack), dark-friendly color variables",
+        "App.tsx wraps routes in layout",
+        "API client service created at client/src/services/api.ts with typed fetch wrapper functions for all endpoints (listBooks, getBook, getChapter, uploadBook, deleteBook, getProgress, updateProgress)",
+        "API base URL configurable (defaults to '' in production, 'http://localhost:3000' in dev via env var)",
+        "TypeScript compiles without errors",
+        "Client dev server renders without errors"
+      ],
+      "priority": 7,
+      "passes": true,
+      "notes": "Keep it simple — no state management library. React state + context is sufficient. Use shared types from the shared package for API response types."
+    },
+    {
+      "id": "US-008",
+      "title": "Client: Library page with book grid",
+      "description": "Library page showing grid of book cards with cover, title, author, progress bar. Fetches from API on mount.",
+      "acceptanceCriteria": [
+        "Fetches book list from GET /api/books on mount",
+        "Shows loading state while fetching",
+        "Renders grid of book cards (CSS grid, responsive: 2-4 columns depending on viewport)",
+        "Each card shows: cover image (or colored placeholder if no cover), title, author, progress bar with percentage",
+        "Colored placeholder generated from title string (deterministic color from hash)",
+        "Clicking a card navigates to /read/:bookId",
+        "Empty state shown when no books: 'No books yet. Upload an epub to get started.'",
+        "Styled with SCSS modules, uses Radix UI components where appropriate",
+        "TypeScript compiles without errors"
+      ],
+      "priority": 8,
+      "passes": true,
+      "notes": "Progress bar is a simple div with width%. Use CSS grid with auto-fill/minmax for responsive grid. No need for infinite scroll — personal library will be small."
+    },
+    {
+      "id": "US-009",
+      "title": "Client: Book upload functionality",
+      "description": "Add button to upload epub file from library page. Triggers file picker, uploads to API, refreshes library.",
+      "acceptanceCriteria": [
+        "[+ Add] button visible in library page header",
+        "Clicking opens native file picker filtered to .epub files",
+        "On file select, uploads to POST /api/books with multipart form data",
+        "Shows upload progress or loading spinner during upload",
+        "On success, refreshes book list (new book appears in grid)",
+        "On error, shows error message (e.g., toast or inline error)",
+        "Uses Radix UI Button component",
+        "TypeScript compiles without errors"
+      ],
+      "priority": 9,
+      "passes": true,
+      "notes": "Keep it simple — hidden file input triggered by button click. No drag-drop needed for v1."
+    },
+    {
+      "id": "US-010",
+      "title": "Client: Book delete functionality",
+      "description": "Add ability to delete a book from the library with confirmation.",
+      "acceptanceCriteria": [
+        "Right-click on book card shows context menu with 'Delete' option (use Radix UI ContextMenu)",
+        "Clicking Delete shows confirmation dialog (Radix UI AlertDialog): 'Delete {title}? This cannot be undone.'",
+        "Confirming calls DELETE /api/books/:id and removes card from grid",
+        "Cancel dismisses dialog without action",
+        "TypeScript compiles without errors"
+      ],
+      "priority": 10,
+      "passes": true,
+      "notes": "Radix UI ContextMenu and AlertDialog are the right primitives here."
+    },
+    {
+      "id": "US-011",
+      "title": "Client: Reader page - sentence display and navigation",
+      "description": "Reader page that loads a book's chapter and displays sentences in focused view. Current sentence large and centered, prev/next dimmed.",
+      "acceptanceCriteria": [
+        "On mount: fetch book info (GET /api/books/:id) and progress (GET /api/books/:id/progress)",
+        "If progress exists, load that chapter and set sentence index. If not, load first chapter, first sentence",
+        "Fetch current chapter sentences (GET /api/chapters/:chapterId)",
+        "Display current sentence: large, full opacity, centered vertically in viewport",
+        "Display previous sentence above: smaller font, opacity 0.3",
+        "Display next sentence below: smaller font, opacity 0.3",
+        "Minimal header: back button (navigates to /), book title, chapter indicator (e.g., 'Ch 3/12')",
+        "Bottom controls bar with: previous button, play/pause button, next button",
+        "Previous/next buttons change current sentence index",
+        "When reaching end of chapter, auto-load next chapter's sentences and continue",
+        "When reaching start of chapter on prev, load previous chapter's last sentence",
+        "Sentence transitions animate with subtle vertical slide/fade (CSS transition)",
+        "TypeScript compiles without errors",
+        "Navigation between sentences works correctly"
+      ],
+      "priority": 11,
+      "passes": true,
+      "notes": "Use React state for currentChapterIdx and currentSentenceIdx. Preload adjacent chapters for smooth transitions. Use Radix UI IconButton for controls."
+    },
+    {
+      "id": "US-012",
+      "title": "Client: TTS integration with Web Speech API",
+      "description": "useTTS hook that speaks the current sentence and auto-advances. Play/pause controls.",
+      "acceptanceCriteria": [
+        "useTTS custom hook in client/src/hooks/useTTS.ts",
+        "Hook exposes: play(), pause(), isPlaying, speed, setSpeed",
+        "play() creates SpeechSynthesisUtterance for current sentence text and calls speechSynthesis.speak()",
+        "On utterance 'end' event, advances to next sentence and speaks it (auto-advance loop)",
+        "pause() calls speechSynthesis.cancel() and stops auto-advance",
+        "Speed control: 0.5x to 2.0x in 0.25 increments, applied via utterance.rate",
+        "Play/pause button in reader controls toggles TTS",
+        "When user manually navigates (prev/next) while playing, cancel current utterance and speak new sentence",
+        "TTS stops when reaching end of last chapter",
+        "TypeScript compiles without errors"
+      ],
+      "priority": 12,
+      "passes": true,
+      "notes": "Web Speech API quirk: speechSynthesis.cancel() must be called before speaking a new utterance, otherwise they queue. Use speechSynthesis.speaking to check state."
+    },
+    {
+      "id": "US-013",
+      "title": "Client: Progress saving",
+      "description": "Auto-save reading position to server as user reads.",
+      "acceptanceCriteria": [
+        "On sentence change, debounce a PUT /api/books/:id/progress call (5 second debounce)",
+        "Also save immediately on pause and on page unload (beforeunload event)",
+        "On returning to a book, resume from saved position (already partly implemented in US-011)",
+        "Progress bar on library page reflects actual position",
+        "TypeScript compiles without errors"
+      ],
+      "priority": 13,
+      "passes": true,
+      "notes": "Use a simple debounce utility (write one, don't install lodash). beforeunload handler should use navigator.sendBeacon for reliability."
+    },
+    {
+      "id": "US-014",
+      "title": "Client: Keyboard shortcuts",
+      "description": "Global keyboard shortcuts for playback control in reader view.",
+      "acceptanceCriteria": [
+        "Space: toggle play/pause (prevent default scroll)",
+        "ArrowLeft: previous sentence",
+        "ArrowRight: next sentence",
+        "[ (left bracket): decrease speed by 0.25 (min 0.5)",
+        "] (right bracket): increase speed by 0.25 (max 2.0)",
+        "Shortcuts only active on reader page, not library",
+        "Speed change shows brief visual feedback (current speed displayed near controls)",
+        "TypeScript compiles without errors"
+      ],
+      "priority": 14,
+      "passes": true,
+      "notes": "useEffect with keydown listener. Clean up on unmount. Check that focus isn't in an input before handling."
+    },
+    {
+      "id": "US-015",
+      "title": "Client: Focus mode toggle",
+      "description": "Toggle to hide surrounding sentences, showing only the current one.",
+      "acceptanceCriteria": [
+        "Toggle button/switch in reader controls or header",
+        "When focus mode ON: only current sentence visible, prev/next hidden",
+        "When focus mode OFF: prev/next sentences visible and dimmed (default)",
+        "Toggle state persisted in localStorage",
+        "Smooth transition when toggling (fade in/out surrounding sentences)",
+        "Uses Radix UI Switch or Toggle component",
+        "TypeScript compiles without errors"
+      ],
+      "priority": 15,
+      "passes": true,
+      "notes": "Simple boolean state with CSS transition on opacity."
+    },
+    {
+      "id": "US-016",
+      "title": "Client: Chapter navigation",
+      "description": "Chapter list/TOC panel to jump between chapters.",
+      "acceptanceCriteria": [
+        "Chapter indicator in header is clickable, opens chapter list panel",
+        "Panel shows all chapters with titles and index numbers",
+        "Current chapter highlighted",
+        "Clicking a chapter loads its sentences and jumps to first sentence",
+        "Panel closes after selection",
+        "Uses Radix UI Dialog or Popover for the panel",
+        "If TTS is playing, stop it when jumping chapters",
+        "TypeScript compiles without errors"
+      ],
+      "priority": 16,
+      "passes": true,
+      "notes": "A simple Radix Dialog with a scrollable list is enough. No need for a sidebar."
+    },
+    {
+      "id": "US-017",
+      "title": "Docker and docker-compose setup",
+      "description": "Multi-stage Dockerfile and docker-compose.yml for self-hosting.",
+      "acceptanceCriteria": [
+        "Dockerfile with multi-stage build: stage 1 installs deps + builds client (pnpm build in client/), stage 2 copies built client + server code into slim Node.js image",
+        "Production server serves client/dist as static files",
+        "docker-compose.yml with single service, port 3000 exposed, data/ volume mounted",
+        ".dockerignore excludes node_modules, data/, .git, etc.",
+        "docker compose build succeeds",
+        "docker compose up starts the app and it's accessible at localhost:3000",
+        "Uploads persist across container restarts (data volume)",
+        "TypeScript compiles without errors"
+      ],
+      "priority": 17,
+      "passes": true,
+      "notes": "Use node:22-slim as base. pnpm via corepack. Build client with pnpm --filter client build. Server runs with node (compiled JS) or tsx in production."
+    },
+    {
+      "id": "US-018",
+      "title": "Polish: error handling and edge cases",
+      "description": "Handle common error cases gracefully across the app.",
+      "acceptanceCriteria": [
+        "Upload of non-epub file shows clear error message",
+        "Network errors on API calls show user-friendly error (not raw error)",
+        "Empty chapters (no sentences) are skipped during reading",
+        "Very long sentences don't break layout (text wraps, max-width applied)",
+        "Speed selector shows current value (e.g., '1.0x') in the controls",
+        "Back button from reader goes to library",
+        "Page title updates to book title when reading",
+        "TypeScript compiles without errors"
+      ],
+      "priority": 18,
+      "passes": true,
+      "notes": "Light polish pass. Don't over-engineer — just handle the obvious failure modes."
+    },
+    {
+      "id": "US-019",
+      "title": "Client: Voice selection for TTS",
+      "description": "Let users pick from available browser TTS voices via a dropdown in the reader controls.",
+      "acceptanceCriteria": [
+        "useTTS hook exposes voices list, selectedVoice, and setVoice",
+        "Voices populated via speechSynthesis.getVoices() with voiceschanged event listener",
+        "Selected voice applied to SpeechSynthesisUtterance before speaking",
+        "Voice selection persisted in localStorage (by voice name + lang)",
+        "Voice picker dropdown in reader controls bar (Radix Select or native select)",
+        "Voices grouped or labeled by language for clarity",
+        "If saved voice no longer available, falls back to default",
+        "Changing voice while playing restarts current utterance with new voice",
+        "TypeScript compiles without errors"
+      ],
+      "priority": 19,
+      "passes": true,
+      "notes": "speechSynthesis.getVoices() loads async in some browsers — must listen for voiceschanged event. Persist by voice URI or name+lang combo since voice objects aren't serializable."
+    }
+  ]
+}

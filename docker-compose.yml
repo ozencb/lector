@@ -1,0 +1,10 @@
+services:
+  tts-reader:
+    image: ghcr.io/ozencb/lector:latest
+    build: .
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./data:/app/server/data
+    environment:
+      - NODE_ENV=production

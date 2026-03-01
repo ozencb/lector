@@ -1,0 +1,10 @@
+node_modules/
+dist/
+data/
+build/
+*.log
+.env
+.DS_Store
+progress.txt
+
+*.tsbuildinfo
