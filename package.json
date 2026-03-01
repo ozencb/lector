@@ -1,5 +1,6 @@
 {
   "name": "tts-reader",
+  "version": "0.1.0",
   "private": true,
   "pnpm": {
     "onlyBuiltDependencies": ["better-sqlite3", "esbuild", "@parcel/watcher"]
@@ -8,7 +9,10 @@
     "dev:client": "pnpm --filter client dev",
     "dev:server": "pnpm --filter server dev",
     "build": "pnpm --filter client build",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "release:patch": "pnpm version patch && git push && git push --tags",
+    "release:minor": "pnpm version minor && git push && git push --tags",
+    "release:major": "pnpm version major && git push && git push --tags"
   },
   "devDependencies": {
     "typescript": "^5.7.0"
