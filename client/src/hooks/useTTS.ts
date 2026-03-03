@@ -7,6 +7,7 @@ interface UseTTSOptions {
 }
 
 const VOICE_STORAGE_KEY = 'tts-voice';
+const SPEED_STORAGE_KEY = 'tts-speed';
 
 function getStoredVoiceKey(): string | null {
   return localStorage.getItem(VOICE_STORAGE_KEY);
@@ -26,12 +27,15 @@ function findVoiceByKey(voices: SpeechSynthesisVoice[], key: string): SpeechSynt
  * the deviation from 1.0 so user-facing labels feel accurate.
  */
 function adjustRate(rate: number): number {
-  return 1 + (rate - 1) * 0.5;
+  return 1 + (rate - 1) * 0.35;
 }
 
 export function useTTS({ text, onEnd }: UseTTSOptions) {
   const [isPlaying, setIsPlaying] = useState(false);
-  const [speed, setSpeed] = useState(1.0);
+  const [speed, setSpeedState] = useState(() => {
+    const stored = localStorage.getItem(SPEED_STORAGE_KEY);
+    return stored ? parseFloat(stored) : 1.0;
+  });
   const [voices, setVoices] = useState<SpeechSynthesisVoice[]>([]);
   const [selectedVoice, setSelectedVoice] = useState<SpeechSynthesisVoice | null>(null);
   const onEndRef = useRef(onEnd);
@@ -139,6 +143,11 @@ export function useTTS({ text, onEnd }: UseTTSOptions) {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedVoice]);
+
+  const setSpeed = useCallback((s: number) => {
+    setSpeedState(s);
+    localStorage.setItem(SPEED_STORAGE_KEY, String(s));
+  }, []);
 
   return { isPlaying, play, pause, speed, setSpeed, voices, selectedVoice, setVoice };
 }
