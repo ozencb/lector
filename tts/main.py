@@ -67,18 +67,20 @@ model_ready = False
 def load_model():
     global pipelines, model_ready
     logger.info("Loading Kokoro pipelines...")
-    # Create a pipeline for each language code. The first pipeline loads the
-    # model weights; subsequent ones share via model=False then we assign.
     first_pipeline: Optional[KPipeline] = None
     for lang_code in LANG_CODES:
-        if first_pipeline is None:
-            pipe = KPipeline(lang_code=lang_code)
-            first_pipeline = pipe
-        else:
-            pipe = KPipeline(lang_code=lang_code, model=first_pipeline.model)
-        pipelines[lang_code] = pipe
+        try:
+            if first_pipeline is None:
+                pipe = KPipeline(lang_code=lang_code)
+                first_pipeline = pipe
+            else:
+                pipe = KPipeline(lang_code=lang_code, model=first_pipeline.model)
+            pipelines[lang_code] = pipe
+        except Exception as e:
+            logger.warning(f"Skipping language '{lang_code}' ({LANG_CODES[lang_code]}): {e}")
     model_ready = True
-    logger.info("Kokoro pipelines loaded and ready.")
+    loaded = [f"{c} ({LANG_CODES[c]})" for c in pipelines]
+    logger.info(f"Kokoro pipelines loaded: {', '.join(loaded)}")
 
 
 @app.get("/health")
@@ -91,7 +93,8 @@ def health():
 @app.get("/voices")
 def voices():
     result = {}
-    for lang_code, voice_list in VOICES.items():
+    for lang_code in pipelines:
+        voice_list = VOICES.get(lang_code, [])
         lang_name = LANG_CODES[lang_code]
         result[lang_name] = [
             {"id": v, "name": v.split("_", 1)[1].replace("_", " ").title()}
