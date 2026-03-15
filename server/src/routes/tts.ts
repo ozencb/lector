@@ -1,5 +1,5 @@
 import { FastifyInstance } from 'fastify';
-import { readFileSync } from 'node:fs';
+import { readFileSync, existsSync, writeFileSync, mkdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { getDb } from '../db.js';
 import { enqueueBookGeneration, getBookTtsStatus } from '../services/tts-generator.js';
@@ -40,6 +40,35 @@ export async function ttsRoutes(server: FastifyInstance) {
       .header('Content-Type', 'audio/ogg')
       .header('Cache-Control', 'public, immutable, max-age=31536000')
       .send(buffer);
+  });
+
+  // GET /api/tts/demo/:voiceId — cached voice demo
+  server.get<{ Params: { voiceId: string } }>('/api/tts/demo/:voiceId', async (request, reply) => {
+    const { voiceId } = request.params;
+    const demoDir = join('data', 'tts', 'demo');
+    const cachePath = join(demoDir, `${voiceId}.ogg`);
+
+    if (existsSync(cachePath)) {
+      const buffer = readFileSync(cachePath);
+      return reply
+        .header('Content-Type', 'audio/ogg')
+        .header('Cache-Control', 'public, immutable, max-age=31536000')
+        .send(buffer);
+    }
+
+    const res = await fetch(`${TTS_SERVICE_URL}/demo/${voiceId}`);
+    if (!res.ok) {
+      return reply.status(res.status).send({ error: await res.text() });
+    }
+
+    const audioBuffer = Buffer.from(await res.arrayBuffer());
+    mkdirSync(demoDir, { recursive: true });
+    writeFileSync(cachePath, audioBuffer);
+
+    return reply
+      .header('Content-Type', 'audio/ogg')
+      .header('Cache-Control', 'public, immutable, max-age=31536000')
+      .send(audioBuffer);
   });
 
   // POST /api/books/:id/regenerate

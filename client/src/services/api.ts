@@ -80,6 +80,10 @@ export function getTtsAudioUrl(sentenceId: string): string {
   return `${BASE_URL}/api/tts/${sentenceId}`;
 }
 
+export function getTtsDemoUrl(voiceId: string): string {
+  return `${BASE_URL}/api/tts/demo/${voiceId}`;
+}
+
 export function regenerateBookAudio(bookId: string): Promise<{ status: string }> {
   return request<{ status: string }>(`/api/books/${bookId}/regenerate`, {
     method: "POST",

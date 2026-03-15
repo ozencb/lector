@@ -103,6 +103,49 @@ def voices():
     return result
 
 
+DEMO_SENTENCES = {
+    "a": "The quick brown fox jumps over the lazy dog.",
+    "b": "The quick brown fox jumps over the lazy dog.",
+    "e": "El rápido zorro marrón salta sobre el perro perezoso.",
+    "f": "Le rapide renard brun saute par-dessus le chien paresseux.",
+    "h": "तेज़ भूरी लोमड़ी आलसी कुत्ते के ऊपर कूद गई।",
+    "i": "La veloce volpe marrone salta sopra il cane pigro.",
+    "j": "素早い茶色の狐が怠惰な犬を飛び越えた。",
+    "p": "A rápida raposa marrom pula sobre o cachorro preguiçoso.",
+    "z": "敏捷的棕色狐狸跳过了懒惰的狗。",
+}
+
+
+@app.get("/demo/{voice_id}")
+def demo(voice_id: str):
+    if voice_id not in ALL_VOICE_IDS:
+        raise HTTPException(status_code=400, detail=f"Unknown voice: {voice_id}")
+
+    lang_code = voice_id[0]
+    if lang_code not in pipelines:
+        raise HTTPException(status_code=400, detail=f"Language not loaded for voice: {voice_id}")
+
+    text = DEMO_SENTENCES.get(lang_code, DEMO_SENTENCES["a"])
+    pipeline = pipelines[lang_code]
+
+    audio_chunks = []
+    for result in pipeline(text, voice=voice_id, speed=1.0):
+        if result.audio is not None:
+            audio_chunks.append(result.audio)
+
+    if not audio_chunks:
+        raise HTTPException(status_code=500, detail="No audio generated")
+
+    audio = torch.cat(audio_chunks) if len(audio_chunks) > 1 else audio_chunks[0]
+    audio_np = audio.numpy() if isinstance(audio, torch.Tensor) else audio
+
+    buf = io.BytesIO()
+    sf.write(buf, audio_np, SAMPLE_RATE, format="OGG", subtype="VORBIS")
+    buf.seek(0)
+
+    return Response(content=buf.read(), media_type="audio/ogg")
+
+
 class SynthesizeRequest(BaseModel):
     text: str
     voice: str
