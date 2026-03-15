@@ -7,7 +7,6 @@ import {
   PlayIcon,
   PauseIcon,
   TimerIcon,
-  SpeakerLoudIcon,
 } from '@radix-ui/react-icons';
 import * as Dialog from '@radix-ui/react-dialog';
 import * as Switch from '@radix-ui/react-switch';
@@ -166,7 +165,10 @@ export default function ReaderPage() {
   isAtEndRef.current = isAtEnd;
 
   const tts = useTTS({
-    text: currentSentence?.text,
+    sentenceId: currentSentence?.id,
+    prefetchIds: chapter?.sentences
+      .slice(sentenceIdx + 1, sentenceIdx + 6)
+      .map(s => s.id),
     onEnd: () => {
       if (isAtEndRef.current) return false;
       goToSentence('next');
@@ -251,7 +253,6 @@ export default function ReaderPage() {
 
   const [chapterDialogOpen, setChapterDialogOpen] = useState(false);
   const [speedPickerOpen, setSpeedPickerOpen] = useState(false);
-  const [voicePickerOpen, setVoicePickerOpen] = useState(false);
 
   const jumpToChapter = useCallback(async (idx: number) => {
     if (!book) return;
@@ -322,7 +323,7 @@ export default function ReaderPage() {
         }
         case ']': {
           const cur = ttsRef.current.speed;
-          const next = Math.min(2.0, cur + 0.25);
+          const next = Math.min(3.0, cur + 0.25);
           if (next !== cur) {
             ttsRef.current.setSpeed(next);
             showSpeedToast(next);
@@ -436,11 +437,6 @@ export default function ReaderPage() {
         >
           <ChevronRightIcon width={24} height={24} />
         </button>
-        {tts.voices.length > 0 && (
-          <button className={styles.iconButton} onClick={() => setVoicePickerOpen(true)} aria-label="Voice selection">
-            <SpeakerLoudIcon width={20} height={20} />
-          </button>
-        )}
       </div>
 
       {/* Speed picker modal */}
@@ -455,28 +451,6 @@ export default function ReaderPage() {
               onChange={(val) => tts.setSpeed(parseFloat(val))}
             />
             <button className={styles.pickerDone} onClick={() => setSpeedPickerOpen(false)}>Done</button>
-          </Dialog.Content>
-        </Dialog.Portal>
-      </Dialog.Root>
-
-      {/* Voice picker modal */}
-      <Dialog.Root open={voicePickerOpen} onOpenChange={setVoicePickerOpen}>
-        <Dialog.Portal>
-          <Dialog.Overlay className={styles.pickerOverlay} />
-          <Dialog.Content className={styles.pickerContent}>
-            <Dialog.Title className={styles.pickerTitle}>Voice</Dialog.Title>
-            <WheelPicker
-              items={[
-                { label: 'Default', value: '' },
-                ...tts.voices.map(v => ({ label: `${v.name} (${v.lang})`, value: `${v.name}::${v.lang}` })),
-              ]}
-              value={tts.selectedVoice ? `${tts.selectedVoice.name}::${tts.selectedVoice.lang}` : ''}
-              onChange={(val) => {
-                const voice = tts.voices.find(v => `${v.name}::${v.lang}` === val) ?? null;
-                tts.setVoice(voice);
-              }}
-            />
-            <button className={styles.pickerDone} onClick={() => setVoicePickerOpen(false)}>Done</button>
           </Dialog.Content>
         </Dialog.Portal>
       </Dialog.Root>
