@@ -128,6 +128,7 @@ export async function booksRoutes(server: FastifyInstance) {
       coverPath,
       totalChapters,
       totalSentences,
+      ttsStatus: 'pending',
     };
 
     return reply.status(201).send(response);
@@ -138,7 +139,7 @@ export async function booksRoutes(server: FastifyInstance) {
     const db = getDb();
     const rows = db.prepare(`
       SELECT
-        b.id, b.title, b.author, b.cover_path, b.created_at,
+        b.id, b.title, b.author, b.cover_path, b.created_at, b.tts_status,
         (SELECT COUNT(*) FROM chapters c WHERE c.book_id = b.id) AS total_chapters,
         (SELECT COUNT(*) FROM sentences s JOIN chapters c ON s.chapter_id = c.id WHERE c.book_id = b.id) AS total_sentences,
         (
@@ -162,7 +163,7 @@ export async function booksRoutes(server: FastifyInstance) {
       ORDER BY b.created_at DESC
     `).all() as Array<{
       id: string; title: string; author: string; cover_path: string | null;
-      created_at: number; total_chapters: number; total_sentences: number;
+      created_at: number; tts_status: string; total_chapters: number; total_sentences: number;
       progress: number | null;
     }>;
 
@@ -175,6 +176,7 @@ export async function booksRoutes(server: FastifyInstance) {
       totalChapters: r.total_chapters,
       totalSentences: r.total_sentences,
       progress: r.progress !== null ? r.progress / 100 : null,
+      ttsStatus: r.tts_status as Book['ttsStatus'],
     }));
 
     return books;

@@ -44,7 +44,19 @@ export function initDb(dbPath = 'data/tts-reader.db'): Database.Database {
     CREATE INDEX IF NOT EXISTS idx_chapters_book_id ON chapters(book_id);
     CREATE INDEX IF NOT EXISTS idx_sentences_chapter_id ON sentences(chapter_id);
     CREATE INDEX IF NOT EXISTS idx_progress_book_id ON progress(book_id);
+
+    CREATE TABLE IF NOT EXISTS sentence_audio (
+      sentence_id TEXT PRIMARY KEY REFERENCES sentences(id) ON DELETE CASCADE,
+      hash TEXT NOT NULL,
+      status TEXT NOT NULL DEFAULT 'pending'
+    );
+    CREATE INDEX IF NOT EXISTS idx_sentence_audio_hash ON sentence_audio(hash);
   `);
+
+  // Add TTS columns to books (no-op if already exist)
+  try { db.exec(`ALTER TABLE books ADD COLUMN tts_status TEXT DEFAULT 'pending'`); } catch { /* already exists */ }
+  try { db.exec(`ALTER TABLE books ADD COLUMN tts_voice TEXT`); } catch { /* already exists */ }
+  try { db.exec(`ALTER TABLE books ADD COLUMN tts_language TEXT`); } catch { /* already exists */ }
 
   return db;
 }

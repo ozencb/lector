@@ -7,6 +7,7 @@ export interface Book {
   totalChapters: number;
   totalSentences: number;
   progress: number | null;
+  ttsStatus: 'pending' | 'generating' | 'completed' | 'failed';
 }
 
 export interface Chapter {
@@ -55,4 +56,21 @@ export interface BookUploadResponse {
   coverPath: string | null;
   totalChapters: number;
   totalSentences: number;
+  ttsStatus: 'pending' | 'generating' | 'completed' | 'failed';
+}
+
+export interface TtsStatus {
+  status: 'pending' | 'generating' | 'completed' | 'failed';
+  total: number;
+  completed: number;
+  failed: number;
+}
+
+export interface TtsVoice {
+  id: string;
+  name: string;
+}
+
+export interface TtsVoiceMap {
+  [language: string]: TtsVoice[];
 }
