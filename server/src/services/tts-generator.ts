@@ -64,7 +64,11 @@ async function processBook(
     ON CONFLICT(sentence_id) DO UPDATE SET hash = excluded.hash, status = excluded.status, file_size = excluded.file_size
   `);
 
+  const bookExists = db.prepare(`SELECT 1 FROM books WHERE id = ?`);
+
   for (const sentence of sentences) {
+    if (!bookExists.get(bookId)) return;
+
     const hash = createHash('sha256')
       .update(sentence.text + voice + language)
       .digest('hex')
