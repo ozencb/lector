@@ -93,7 +93,10 @@ def voices():
     result = {}
     for lang_code, voice_list in VOICES.items():
         lang_name = LANG_CODES[lang_code]
-        result[lang_name] = voice_list
+        result[lang_name] = [
+            {"id": v, "name": v.split("_", 1)[1].replace("_", " ").title()}
+            for v in voice_list
+        ]
     return result
 
 
