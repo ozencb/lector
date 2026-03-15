@@ -1,5 +1,5 @@
 services:
-  tts-reader:
+  lector:
     image: ghcr.io/ozencb/lector:latest
     build: .
     ports:
@@ -8,3 +8,15 @@ services:
       - ./data:/app/server/data
     environment:
       - NODE_ENV=production
+      - TTS_SERVICE_URL=http://tts:5000
+
+  tts:
+    build: ./tts
+    volumes:
+      - ./data:/app/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
