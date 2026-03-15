@@ -5,6 +5,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { EPub } from 'epub2';
 import sbd from 'sbd';
 import { getDb } from '../db.js';
+import { enqueueBookGeneration, cleanupOrphanedAudio } from '../services/tts-generator.js';
 import type { Book, BookDetail, BookUploadResponse } from '@tts-reader/shared';
 
 function stripHtml(html: string): string {
@@ -33,6 +34,10 @@ export async function booksRoutes(server: FastifyInstance) {
     if (!filename.endsWith('.epub')) {
       return reply.status(400).send({ error: 'File must be an epub' });
     }
+
+    const voice = (data.fields.voice as any)?.value || 'af_heart';
+    const language = (data.fields.language as any)?.value || 'a';
+    const errorBehavior = (data.fields.errorBehavior as any)?.value || 'skip';
 
     const bookId = uuidv4();
     const booksDir = join('data', 'books');
@@ -94,7 +99,7 @@ export async function booksRoutes(server: FastifyInstance) {
     // Insert all data in a single synchronous transaction
     const db = getDb();
     const insertBook = db.prepare(
-      'INSERT INTO books (id, title, author, cover_path, file_path, created_at) VALUES (?, ?, ?, ?, ?, ?)'
+      'INSERT INTO books (id, title, author, cover_path, file_path, created_at, tts_status, tts_voice, tts_language) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)'
     );
     const insertChapter = db.prepare(
       'INSERT INTO chapters (id, book_id, idx, title) VALUES (?, ?, ?, ?)'
@@ -107,7 +112,7 @@ export async function booksRoutes(server: FastifyInstance) {
     let totalSentences = 0;
 
     const insertAll = db.transaction(() => {
-      insertBook.run(bookId, title, author, coverPath, epubPath, Date.now());
+      insertBook.run(bookId, title, author, coverPath, epubPath, Date.now(), 'pending', voice, language);
       for (const chapter of parsedChapters) {
         const chapterId = uuidv4();
         insertChapter.run(chapterId, bookId, totalChapters, chapter.title);
@@ -120,6 +125,8 @@ export async function booksRoutes(server: FastifyInstance) {
     });
 
     insertAll();
+
+    enqueueBookGeneration(bookId, voice, language, errorBehavior);
 
     const response: BookUploadResponse = {
       id: bookId,
@@ -185,8 +192,8 @@ export async function booksRoutes(server: FastifyInstance) {
   // GET /api/books/:id - single book with chapters
   server.get<{ Params: { id: string } }>('/api/books/:id', async (request, reply) => {
     const db = getDb();
-    const book = db.prepare('SELECT id, title, author, cover_path FROM books WHERE id = ?').get(request.params.id) as
-      { id: string; title: string; author: string; cover_path: string | null } | undefined;
+    const book = db.prepare('SELECT id, title, author, cover_path, tts_status FROM books WHERE id = ?').get(request.params.id) as
+      { id: string; title: string; author: string; cover_path: string | null; tts_status: string } | undefined;
 
     if (!book) {
       return reply.status(404).send({ error: 'Book not found' });
@@ -205,6 +212,7 @@ export async function booksRoutes(server: FastifyInstance) {
       title: book.title,
       author: book.author,
       coverPath: book.cover_path,
+      ttsStatus: book.tts_status as BookDetail['ttsStatus'],
       chapters: chapters.map(c => ({
         id: c.id,
         bookId: c.book_id,
@@ -227,8 +235,10 @@ export async function booksRoutes(server: FastifyInstance) {
       return reply.status(404).send({ error: 'Book not found' });
     }
 
-    // Delete from DB (cascades to chapters, sentences, progress)
+    // Delete from DB (cascades to chapters, sentences, progress, sentence_audio)
     db.prepare('DELETE FROM books WHERE id = ?').run(book.id);
+
+    cleanupOrphanedAudio();
 
     // Clean up files
     try { unlinkSync(book.file_path); } catch { /* already gone */ }

@@ -38,6 +38,7 @@ export interface BookDetail {
   title: string;
   author: string;
   coverPath: string | null;
+  ttsStatus: 'pending' | 'generating' | 'completed' | 'failed';
   chapters: Chapter[];
 }
 

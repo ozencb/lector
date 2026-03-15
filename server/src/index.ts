@@ -7,6 +7,7 @@ import cors from '@fastify/cors';
 import { initDb } from './db.js';
 import { booksRoutes } from './routes/books.js';
 import { chaptersRoutes } from './routes/chapters.js';
+import { ttsRoutes } from './routes/tts.js';
 
 const server = Fastify({ logger: true });
 
@@ -53,6 +54,7 @@ server.get('/health', async () => {
 
 server.register(booksRoutes);
 server.register(chaptersRoutes);
+server.register(ttsRoutes);
 
 const start = async () => {
   try {
