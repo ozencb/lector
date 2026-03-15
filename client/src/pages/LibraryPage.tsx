@@ -1,9 +1,11 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { PlusIcon } from '@radix-ui/react-icons';
+import { GearIcon, PlusIcon } from '@radix-ui/react-icons';
 import type { Book } from '@tts-reader/shared';
 import { deleteBook, listBooks, uploadBook } from '../services/api.js';
 import BookCard from '../components/BookCard.js';
 import ThemeToggle from '../components/ThemeToggle.js';
+import ImportModal from '../components/ImportModal.js';
+import SettingsPanel from '../components/SettingsPanel.js';
 import styles from './LibraryPage.module.scss';
 
 export default function LibraryPage() {
@@ -11,6 +13,9 @@ export default function LibraryPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
+  const [importModalOpen, setImportModalOpen] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [pendingFile, setPendingFile] = useState<File | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const fetchBooks = useCallback(() => {
@@ -39,15 +44,41 @@ export default function LibraryPage() {
     // Reset input so same file can be re-selected
     e.target.value = '';
 
+    const skipDialog = localStorage.getItem('tts-skip-import-dialog') === 'true';
+    if (skipDialog) {
+      const defaultVoice = localStorage.getItem('tts-default-voice') || undefined;
+      const defaultLanguage = localStorage.getItem('tts-default-language') || undefined;
+      const errorBehavior = localStorage.getItem('tts-error-behavior') || 'skip';
+      setUploading(true);
+      setError(null);
+      try {
+        await uploadBook(file, defaultVoice, defaultLanguage, errorBehavior);
+        fetchBooks();
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Upload failed');
+      } finally {
+        setUploading(false);
+      }
+    } else {
+      setPendingFile(file);
+      setImportModalOpen(true);
+    }
+  };
+
+  const handleImportConfirm = async (voice: string, language: string) => {
+    if (!pendingFile) return;
+    setImportModalOpen(false);
     setUploading(true);
     setError(null);
     try {
-      await uploadBook(file);
+      const errorBehavior = localStorage.getItem('tts-error-behavior') || 'skip';
+      await uploadBook(pendingFile, voice, language, errorBehavior);
       fetchBooks();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Upload failed');
     } finally {
       setUploading(false);
+      setPendingFile(null);
     }
   };
 
@@ -56,6 +87,9 @@ export default function LibraryPage() {
       <div className={styles.header}>
         <h1 className={styles.heading}>Library</h1>
         <ThemeToggle />
+        <button className={styles.settingsButton} onClick={() => setSettingsOpen(true)} aria-label="Settings">
+          <GearIcon width={18} height={18} />
+        </button>
         <input
           ref={fileInputRef}
           type="file"
@@ -90,10 +124,12 @@ export default function LibraryPage() {
       {!loading && !error && books.length > 0 && (
         <div className={styles.grid}>
           {books.map((book) => (
-            <BookCard key={book.id} book={book} onDelete={handleDelete} />
+            <BookCard key={book.id} book={book} onDelete={handleDelete} onRetry={fetchBooks} />
           ))}
         </div>
       )}
+      <ImportModal open={importModalOpen} onOpenChange={setImportModalOpen} onConfirm={handleImportConfirm} />
+      <SettingsPanel open={settingsOpen} onOpenChange={setSettingsOpen} />
     </div>
   );
 }

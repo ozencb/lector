@@ -82,6 +82,31 @@
   text-align: right;
 }
 
+.ttsStatus {
+  font-size: 0.75rem;
+  color: var(--color-text-muted);
+  margin-top: 4px;
+}
+
+.ttsProgress {
+  font-variant-numeric: tabular-nums;
+}
+
+.ttsRetry {
+  display: inline;
+  background: none;
+  border: none;
+  color: var(--color-accent);
+  font-size: 0.75rem;
+  cursor: pointer;
+  padding: 0 4px;
+  text-decoration: underline;
+
+  &:hover {
+    opacity: 0.8;
+  }
+}
+
 // Context menu
 .contextMenu {
   background: var(--color-surface);

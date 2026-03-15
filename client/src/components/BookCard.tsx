@@ -1,8 +1,9 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import * as ContextMenu from '@radix-ui/react-context-menu';
 import * as AlertDialog from '@radix-ui/react-alert-dialog';
 import type { Book } from '@tts-reader/shared';
 import { useNavigate } from 'react-router-dom';
+import { getTtsStatus, regenerateBookAudio } from '../services/api.js';
 import styles from './BookCard.module.scss';
 
 function hashColor(str: string): string {
@@ -17,13 +18,43 @@ function hashColor(str: string): string {
 interface BookCardProps {
   book: Book;
   onDelete?: (id: string) => void;
+  onRetry?: (id: string) => void;
 }
 
-export default function BookCard({ book, onDelete }: BookCardProps) {
+export default function BookCard({ book, onDelete, onRetry }: BookCardProps) {
   const navigate = useNavigate();
   const [confirmOpen, setConfirmOpen] = useState(false);
+  const [ttsCompleted, setTtsCompleted] = useState(0);
+  const [ttsTotal, setTtsTotal] = useState(0);
+  const ttsStatus = book.ttsStatus;
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const progress = book.progress ?? 0;
   const pct = Math.round(progress * 100);
+
+  useEffect(() => {
+    if (ttsStatus === 'generating') {
+      const poll = () => {
+        getTtsStatus(book.id).then((s) => {
+          setTtsCompleted(s.completed);
+          setTtsTotal(s.total);
+        }).catch(() => {});
+      };
+      poll();
+      intervalRef.current = setInterval(poll, 5000);
+      return () => {
+        if (intervalRef.current) clearInterval(intervalRef.current);
+      };
+    }
+    return () => {
+      if (intervalRef.current) clearInterval(intervalRef.current);
+    };
+  }, [ttsStatus, book.id]);
+
+  const handleRetry = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    await regenerateBookAudio(book.id);
+    onRetry?.(book.id);
+  };
 
   const cardContent = (
     <>
@@ -51,6 +82,19 @@ export default function BookCard({ book, onDelete }: BookCardProps) {
             <div className={styles.progressLabel}>{pct}%</div>
           )}
         </div>
+        {ttsStatus === 'generating' && (
+          <div className={styles.ttsStatus}>
+            Generating audio… <span className={styles.ttsProgress}>{ttsCompleted}/{ttsTotal}</span>
+          </div>
+        )}
+        {ttsStatus === 'pending' && (
+          <div className={styles.ttsStatus}>Audio pending…</div>
+        )}
+        {ttsStatus === 'failed' && (
+          <div className={styles.ttsStatus}>
+            Audio failed <button className={styles.ttsRetry} onClick={handleRetry}>Retry</button>
+          </div>
+        )}
       </div>
     </>
   );
