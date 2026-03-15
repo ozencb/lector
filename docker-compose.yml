@@ -11,6 +11,7 @@ services:
       - TTS_SERVICE_URL=http://tts:5000
 
   tts:
+    image: ghcr.io/ozencb/lector-tts:latest
     build: ./tts
     volumes:
       - ./data:/app/data
