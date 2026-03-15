@@ -59,6 +59,16 @@ export async function booksRoutes(server: FastifyInstance) {
     const title = epub.metadata?.title || 'Untitled';
     const author = epub.metadata?.creator || 'Unknown';
 
+    // Check for duplicate book (same title and file size)
+    const db = getDb();
+    const existing = db.prepare(
+      'SELECT id FROM books WHERE title = ? AND file_size = ?'
+    ).get(title, fileBuffer.length) as { id: string } | undefined;
+    if (existing) {
+      unlinkSync(epubPath);
+      return reply.status(409).send({ error: `"${title}" already exists in your library` });
+    }
+
     // Extract cover image if present
     let coverPath: string | null = null;
     const coverId = epub.metadata?.cover;
@@ -97,7 +107,6 @@ export async function booksRoutes(server: FastifyInstance) {
     }
 
     // Insert all data in a single synchronous transaction
-    const db = getDb();
     const insertBook = db.prepare(
       'INSERT INTO books (id, title, author, cover_path, file_path, created_at, tts_status, tts_voice, tts_language, file_size) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
     );

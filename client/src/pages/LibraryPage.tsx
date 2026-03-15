@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { DashboardIcon, GearIcon, ListBulletIcon, PlusIcon } from '@radix-ui/react-icons';
+import { DashboardIcon, GearIcon, GitHubLogoIcon, ListBulletIcon, PlusIcon } from '@radix-ui/react-icons';
 import type { Book } from '@tts-reader/shared';
 import { deleteBook, listBooks, uploadBook } from '../services/api.js';
 import BookCard from '../components/BookCard.js';
@@ -103,6 +103,9 @@ export default function LibraryPage() {
         <button className={styles.settingsButton} onClick={() => setSettingsOpen(true)} aria-label="Settings">
           <GearIcon width={18} height={18} />
         </button>
+        <a className={styles.githubLink} href="https://github.com/ozencb/lector" target="_blank" rel="noopener noreferrer" aria-label="GitHub">
+          <GitHubLogoIcon width={18} height={18} />
+        </a>
         <input
           ref={fileInputRef}
           type="file"
