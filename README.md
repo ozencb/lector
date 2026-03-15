@@ -26,15 +26,21 @@ Upload an epub, pick a voice, hit play. Lector reads aloud sentence by sentence 
 
 **Library**
 
-![Library](docs/screenshots/library.png)
+![Library](docs/screenshots/library-1.png)
+
+**Table view**
+
+![Table view](docs/screenshots/library-2.png)
 
 **Reader**
 
 ![Reader](docs/screenshots/reader.png)
 
-**Focus mode**
+**Settings**
 
-![Focus mode](docs/screenshots/focus-mode.png)
+![Settings](docs/screenshots/settings.png)
+
+
 
 ---
 
