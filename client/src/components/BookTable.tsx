@@ -69,7 +69,8 @@ export default function BookTable({ books, onDelete, onRetry }: BookTableProps) 
           <tr>
             <th>Title</th>
             <th>Author</th>
-            <th>Size</th>
+            <th>Book Size</th>
+            <th>Audio Size</th>
             <th>Audio</th>
             <th>Progress</th>
             <th></th>
@@ -83,6 +84,7 @@ export default function BookTable({ books, onDelete, onRetry }: BookTableProps) 
                 <td className={styles.titleCell}>{book.title}</td>
                 <td className={styles.authorCell}>{book.author}</td>
                 <td className={styles.sizeCell}>{formatSize(book.fileSize)}</td>
+                <td className={styles.sizeCell}>{formatSize(book.audioSize)}</td>
                 <td className={styles.audioCell}>
                   <TtsCell book={book} onRetry={onRetry} />
                 </td>

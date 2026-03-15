@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto';
-import { existsSync, mkdirSync, readdirSync, unlinkSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readdirSync, statSync, unlinkSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { getDb } from '../db.js';
 import type { TtsStatus } from '@tts-reader/shared';
@@ -59,9 +59,9 @@ async function processBook(
   db.prepare(`UPDATE books SET tts_status = 'generating' WHERE id = ?`).run(bookId);
 
   const upsertAudio = db.prepare(`
-    INSERT INTO sentence_audio (sentence_id, hash, status)
-    VALUES (?, ?, ?)
-    ON CONFLICT(sentence_id) DO UPDATE SET hash = excluded.hash, status = excluded.status
+    INSERT INTO sentence_audio (sentence_id, hash, status, file_size)
+    VALUES (?, ?, ?, ?)
+    ON CONFLICT(sentence_id) DO UPDATE SET hash = excluded.hash, status = excluded.status, file_size = excluded.file_size
   `);
 
   for (const sentence of sentences) {
@@ -72,17 +72,19 @@ async function processBook(
     const filePath = join(TTS_DIR, `${hash}.ogg`);
 
     if (existsSync(filePath)) {
-      upsertAudio.run(sentence.id, hash, 'completed');
+      const fileSize = statSync(filePath).size;
+      upsertAudio.run(sentence.id, hash, 'completed', fileSize);
       continue;
     }
 
     const result = await synthesize(sentence.text, voice, language);
 
     if (result) {
-      writeFileSync(filePath, Buffer.from(result));
-      upsertAudio.run(sentence.id, hash, 'completed');
+      const buf = Buffer.from(result);
+      writeFileSync(filePath, buf);
+      upsertAudio.run(sentence.id, hash, 'completed', buf.length);
     } else {
-      upsertAudio.run(sentence.id, hash, 'failed');
+      upsertAudio.run(sentence.id, hash, 'failed', 0);
       if (errorBehavior === 'stop') {
         db.prepare(`UPDATE books SET tts_status = 'failed' WHERE id = ?`).run(bookId);
         return;

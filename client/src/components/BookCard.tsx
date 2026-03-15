@@ -1,10 +1,18 @@
 import { useEffect, useRef, useState } from 'react';
 import * as ContextMenu from '@radix-ui/react-context-menu';
 import * as AlertDialog from '@radix-ui/react-alert-dialog';
+import * as Dialog from '@radix-ui/react-dialog';
 import type { Book } from '@tts-reader/shared';
 import { useNavigate } from 'react-router-dom';
 import { getTtsStatus, regenerateBookAudio } from '../services/api.js';
 import styles from './BookCard.module.scss';
+
+function formatSize(bytes: number): string {
+  if (bytes === 0) return '—';
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
 
 function hashColor(str: string): string {
   let hash = 0;
@@ -24,6 +32,7 @@ interface BookCardProps {
 export default function BookCard({ book, onDelete, onRetry }: BookCardProps) {
   const navigate = useNavigate();
   const [confirmOpen, setConfirmOpen] = useState(false);
+  const [infoOpen, setInfoOpen] = useState(false);
   const [ttsCompleted, setTtsCompleted] = useState(0);
   const [ttsTotal, setTtsTotal] = useState(0);
   const ttsStatus = book.ttsStatus;
@@ -110,6 +119,13 @@ export default function BookCard({ book, onDelete, onRetry }: BookCardProps) {
         <ContextMenu.Portal>
           <ContextMenu.Content className={styles.contextMenu}>
             <ContextMenu.Item
+              className={styles.contextMenuItemDefault}
+              onSelect={() => setInfoOpen(true)}
+            >
+              Info
+            </ContextMenu.Item>
+            <ContextMenu.Separator className={styles.contextMenuSeparator} />
+            <ContextMenu.Item
               className={styles.contextMenuItem}
               onSelect={() => setConfirmOpen(true)}
             >
@@ -145,6 +161,52 @@ export default function BookCard({ book, onDelete, onRetry }: BookCardProps) {
           </AlertDialog.Content>
         </AlertDialog.Portal>
       </AlertDialog.Root>
+
+      <Dialog.Root open={infoOpen} onOpenChange={setInfoOpen}>
+        <Dialog.Portal>
+          <Dialog.Overlay className={styles.dialogOverlay} />
+          <Dialog.Content className={styles.dialogContent}>
+            <Dialog.Title className={styles.dialogTitle}>
+              {book.title}
+            </Dialog.Title>
+            <dl className={styles.infoList}>
+              <div className={styles.infoRow}>
+                <dt>Author</dt>
+                <dd>{book.author}</dd>
+              </div>
+              <div className={styles.infoRow}>
+                <dt>Chapters</dt>
+                <dd>{book.totalChapters}</dd>
+              </div>
+              <div className={styles.infoRow}>
+                <dt>Sentences</dt>
+                <dd>{book.totalSentences}</dd>
+              </div>
+              <div className={styles.infoRow}>
+                <dt>Book Size</dt>
+                <dd>{formatSize(book.fileSize)}</dd>
+              </div>
+              <div className={styles.infoRow}>
+                <dt>Audio Size</dt>
+                <dd>{formatSize(book.audioSize)}</dd>
+              </div>
+              <div className={styles.infoRow}>
+                <dt>Audio Status</dt>
+                <dd>{book.ttsStatus === 'completed' ? 'Done' : book.ttsStatus === 'generating' ? `Generating (${ttsCompleted}/${ttsTotal})` : book.ttsStatus === 'failed' ? 'Failed' : 'Pending'}</dd>
+              </div>
+              <div className={styles.infoRow}>
+                <dt>Progress</dt>
+                <dd>{pct > 0 ? `${pct}%` : '—'}</dd>
+              </div>
+            </dl>
+            <div className={styles.dialogActions}>
+              <Dialog.Close asChild>
+                <button className={styles.dialogCancel}>Close</button>
+              </Dialog.Close>
+            </div>
+          </Dialog.Content>
+        </Dialog.Portal>
+      </Dialog.Root>
     </>
   );
 }

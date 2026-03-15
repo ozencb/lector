@@ -7,6 +7,7 @@ export interface Book {
   totalChapters: number;
   totalSentences: number;
   fileSize: number;
+  audioSize: number;
   progress: number | null;
   ttsStatus: 'pending' | 'generating' | 'completed' | 'failed';
 }

@@ -118,6 +118,26 @@
   z-index: 100;
 }
 
+.contextMenuItemDefault {
+  padding: 8px 12px;
+  border-radius: 4px;
+  font-size: 0.85rem;
+  cursor: pointer;
+  color: var(--color-text);
+  outline: none;
+
+  &:hover,
+  &[data-highlighted] {
+    background: var(--color-surface-hover);
+  }
+}
+
+.contextMenuSeparator {
+  height: 1px;
+  background: var(--color-border);
+  margin: 4px 0;
+}
+
 .contextMenuItem {
   padding: 8px 12px;
   border-radius: 4px;
@@ -196,5 +216,32 @@
 
   &:hover {
     background: #dc2626;
+  }
+}
+
+.infoList {
+  margin: 0 0 20px;
+  padding: 0;
+}
+
+.infoRow {
+  display: flex;
+  justify-content: space-between;
+  padding: 6px 0;
+  border-bottom: 1px solid var(--color-border);
+  font-size: 0.85rem;
+
+  &:last-child {
+    border-bottom: none;
+  }
+
+  dt {
+    color: var(--color-text-muted);
+    font-weight: 500;
+  }
+
+  dd {
+    margin: 0;
+    font-variant-numeric: tabular-nums;
   }
 }

@@ -147,6 +147,7 @@ export async function booksRoutes(server: FastifyInstance) {
     const rows = db.prepare(`
       SELECT
         b.id, b.title, b.author, b.cover_path, b.created_at, b.tts_status, b.file_size,
+        COALESCE((SELECT SUM(sa.file_size) FROM sentence_audio sa JOIN sentences s ON sa.sentence_id = s.id JOIN chapters c ON s.chapter_id = c.id WHERE c.book_id = b.id AND sa.status = 'completed'), 0) AS audio_size,
         (SELECT COUNT(*) FROM chapters c WHERE c.book_id = b.id) AS total_chapters,
         (SELECT COUNT(*) FROM sentences s JOIN chapters c ON s.chapter_id = c.id WHERE c.book_id = b.id) AS total_sentences,
         (
@@ -172,6 +173,7 @@ export async function booksRoutes(server: FastifyInstance) {
       id: string; title: string; author: string; cover_path: string | null;
       created_at: number; tts_status: string; file_size: number; total_chapters: number; total_sentences: number;
       progress: number | null;
+      audio_size: number;
     }>;
 
     const books: Book[] = rows.map(r => ({
@@ -184,6 +186,7 @@ export async function booksRoutes(server: FastifyInstance) {
       totalSentences: r.total_sentences,
       progress: r.progress !== null ? r.progress / 100 : null,
       fileSize: r.file_size,
+      audioSize: r.audio_size,
       ttsStatus: r.tts_status as Book['ttsStatus'],
     }));
 
