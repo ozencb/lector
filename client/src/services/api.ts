@@ -4,6 +4,8 @@ import type {
   BookUploadResponse,
   ChapterDetail,
   Progress,
+  TtsStatus,
+  TtsVoiceMap,
 } from "@tts-reader/shared";
 
 const BASE_URL = import.meta.env.DEV ? "http://localhost:3000" : "";
@@ -35,9 +37,12 @@ export function deleteBook(id: string): Promise<void> {
   return request<void>(`/api/books/${id}`, { method: "DELETE" });
 }
 
-export function uploadBook(file: File): Promise<BookUploadResponse> {
+export function uploadBook(file: File, voice?: string, language?: string, errorBehavior?: string): Promise<BookUploadResponse> {
   const form = new FormData();
   form.append("file", file);
+  if (voice) form.append("voice", voice);
+  if (language) form.append("language", language);
+  if (errorBehavior) form.append("errorBehavior", errorBehavior);
   return request<BookUploadResponse>("/api/books", {
     method: "POST",
     body: form,
@@ -60,6 +65,24 @@ export function updateProgress(
     method: "PUT",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ sentenceId }),
+  });
+}
+
+export function getTtsStatus(bookId: string): Promise<TtsStatus> {
+  return request<TtsStatus>(`/api/books/${bookId}/tts-status`);
+}
+
+export function getTtsVoices(): Promise<TtsVoiceMap> {
+  return request<TtsVoiceMap>("/api/tts/voices");
+}
+
+export function getTtsAudioUrl(sentenceId: string): string {
+  return `${BASE_URL}/api/tts/${sentenceId}`;
+}
+
+export function regenerateBookAudio(bookId: string): Promise<{ status: string }> {
+  return request<{ status: string }>(`/api/books/${bookId}/regenerate`, {
+    method: "POST",
   });
 }
 
