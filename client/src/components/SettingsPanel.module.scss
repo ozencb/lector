@@ -1,0 +1,94 @@
+.overlay {
+  position: fixed;
+  inset: 0;
+  background: var(--color-overlay);
+}
+
+.content {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: var(--color-surface);
+  border-radius: 8px;
+  padding: 24px;
+  max-width: 400px;
+  width: 90vw;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.title {
+  font-size: 1rem;
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.label {
+  font-size: 0.85rem;
+  color: var(--color-text);
+  white-space: nowrap;
+}
+
+.select {
+  font: inherit;
+  font-size: 0.85rem;
+  padding: 6px 8px;
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  background: var(--color-surface);
+  color: var(--color-text);
+  min-width: 0;
+  max-width: 180px;
+  cursor: pointer;
+}
+
+.switchRoot {
+  width: 32px;
+  height: 18px;
+  background: var(--color-surface-hover);
+  border: none;
+  border-radius: 9px;
+  position: relative;
+  cursor: pointer;
+  transition: background 0.2s;
+  flex-shrink: 0;
+
+  &[data-state='checked'] {
+    background: var(--color-accent);
+  }
+}
+
+.switchThumb {
+  display: block;
+  width: 14px;
+  height: 14px;
+  background: #fff;
+  border-radius: 50%;
+  transition: transform 0.2s;
+  transform: translateX(2px);
+
+  &[data-state='checked'] {
+    transform: translateX(16px);
+  }
+}
+
+.done {
+  align-self: center;
+  border: none;
+  background: none;
+  color: var(--color-accent);
+  font-size: 1rem;
+  font-weight: 600;
+  padding: 8px 24px;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
