@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { GearIcon, PlusIcon } from '@radix-ui/react-icons';
+import { DashboardIcon, GearIcon, ListBulletIcon, PlusIcon } from '@radix-ui/react-icons';
 import type { Book } from '@tts-reader/shared';
 import { deleteBook, listBooks, uploadBook } from '../services/api.js';
 import BookCard from '../components/BookCard.js';
+import BookTable from '../components/BookTable.js';
 import ThemeToggle from '../components/ThemeToggle.js';
 import ImportModal from '../components/ImportModal.js';
 import SettingsPanel from '../components/SettingsPanel.js';
@@ -16,7 +17,16 @@ export default function LibraryPage() {
   const [importModalOpen, setImportModalOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [pendingFile, setPendingFile] = useState<File | null>(null);
+  const [viewMode, setViewMode] = useState<'grid' | 'table'>(() =>
+    (localStorage.getItem('library-view') as 'grid' | 'table') || 'grid'
+  );
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const toggleView = () => {
+    const next = viewMode === 'grid' ? 'table' : 'grid';
+    setViewMode(next);
+    localStorage.setItem('library-view', next);
+  };
 
   const fetchBooks = useCallback(() => {
     listBooks()
@@ -86,6 +96,9 @@ export default function LibraryPage() {
     <div className={styles.page}>
       <div className={styles.header}>
         <h1 className={styles.heading}>Library</h1>
+        <button className={styles.viewToggle} onClick={toggleView} aria-label="Toggle view">
+          {viewMode === 'grid' ? <ListBulletIcon width={18} height={18} /> : <DashboardIcon width={18} height={18} />}
+        </button>
         <ThemeToggle />
         <button className={styles.settingsButton} onClick={() => setSettingsOpen(true)} aria-label="Settings">
           <GearIcon width={18} height={18} />
@@ -121,12 +134,16 @@ export default function LibraryPage() {
         </div>
       )}
 
-      {!loading && !error && books.length > 0 && (
+      {!loading && !error && books.length > 0 && viewMode === 'grid' && (
         <div className={styles.grid}>
           {books.map((book) => (
             <BookCard key={book.id} book={book} onDelete={handleDelete} onRetry={fetchBooks} />
           ))}
         </div>
+      )}
+
+      {!loading && !error && books.length > 0 && viewMode === 'table' && (
+        <BookTable books={books} onDelete={handleDelete} onRetry={fetchBooks} />
       )}
       <ImportModal open={importModalOpen} onOpenChange={setImportModalOpen} onConfirm={handleImportConfirm} />
       <SettingsPanel open={settingsOpen} onOpenChange={setSettingsOpen} />

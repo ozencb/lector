@@ -157,6 +157,17 @@ export function getBookTtsStatus(bookId: string): TtsStatus {
   };
 }
 
+export function resumeInterruptedGenerations(): void {
+  const db = getDb();
+  const interrupted = db.prepare(
+    `SELECT id, tts_voice, tts_language FROM books WHERE tts_status IN ('generating', 'pending') AND tts_voice IS NOT NULL`
+  ).all() as Array<{ id: string; tts_voice: string; tts_language: string }>;
+
+  for (const book of interrupted) {
+    enqueueBookGeneration(book.id, book.tts_voice, book.tts_language);
+  }
+}
+
 export function cleanupOrphanedAudio(): void {
   const db = getDb();
 

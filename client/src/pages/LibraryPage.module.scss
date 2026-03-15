@@ -39,6 +39,23 @@
   font-size: 0.95rem;
 }
 
+.viewToggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  transition: color 0.15s;
+
+  &:hover {
+    color: var(--color-text);
+  }
+}
+
 .settingsButton {
   display: inline-flex;
   align-items: center;

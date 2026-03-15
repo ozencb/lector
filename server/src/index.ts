@@ -8,6 +8,7 @@ import { initDb } from './db.js';
 import { booksRoutes } from './routes/books.js';
 import { chaptersRoutes } from './routes/chapters.js';
 import { ttsRoutes } from './routes/tts.js';
+import { resumeInterruptedGenerations } from './services/tts-generator.js';
 
 const server = Fastify({ logger: true });
 
@@ -60,6 +61,7 @@ const start = async () => {
   try {
     initDb();
     server.log.info('Database initialized');
+    resumeInterruptedGenerations();
     await server.listen({ port: 3000, host: '0.0.0.0' });
     console.log('Server started on port 3000');
   } catch (err) {

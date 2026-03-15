@@ -57,6 +57,7 @@ export function initDb(dbPath = 'data/tts-reader.db'): Database.Database {
   try { db.exec(`ALTER TABLE books ADD COLUMN tts_status TEXT DEFAULT 'pending'`); } catch { /* already exists */ }
   try { db.exec(`ALTER TABLE books ADD COLUMN tts_voice TEXT`); } catch { /* already exists */ }
   try { db.exec(`ALTER TABLE books ADD COLUMN tts_language TEXT`); } catch { /* already exists */ }
+  try { db.exec(`ALTER TABLE books ADD COLUMN file_size INTEGER DEFAULT 0`); } catch { /* already exists */ }
 
   return db;
 }

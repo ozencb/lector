@@ -6,6 +6,7 @@ export interface Book {
   createdAt: number;
   totalChapters: number;
   totalSentences: number;
+  fileSize: number;
   progress: number | null;
   ttsStatus: 'pending' | 'generating' | 'completed' | 'failed';
 }

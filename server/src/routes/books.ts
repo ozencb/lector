@@ -99,7 +99,7 @@ export async function booksRoutes(server: FastifyInstance) {
     // Insert all data in a single synchronous transaction
     const db = getDb();
     const insertBook = db.prepare(
-      'INSERT INTO books (id, title, author, cover_path, file_path, created_at, tts_status, tts_voice, tts_language) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)'
+      'INSERT INTO books (id, title, author, cover_path, file_path, created_at, tts_status, tts_voice, tts_language, file_size) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
     );
     const insertChapter = db.prepare(
       'INSERT INTO chapters (id, book_id, idx, title) VALUES (?, ?, ?, ?)'
@@ -112,7 +112,7 @@ export async function booksRoutes(server: FastifyInstance) {
     let totalSentences = 0;
 
     const insertAll = db.transaction(() => {
-      insertBook.run(bookId, title, author, coverPath, epubPath, Date.now(), 'pending', voice, language);
+      insertBook.run(bookId, title, author, coverPath, epubPath, Date.now(), 'pending', voice, language, fileBuffer.length);
       for (const chapter of parsedChapters) {
         const chapterId = uuidv4();
         insertChapter.run(chapterId, bookId, totalChapters, chapter.title);
@@ -146,7 +146,7 @@ export async function booksRoutes(server: FastifyInstance) {
     const db = getDb();
     const rows = db.prepare(`
       SELECT
-        b.id, b.title, b.author, b.cover_path, b.created_at, b.tts_status,
+        b.id, b.title, b.author, b.cover_path, b.created_at, b.tts_status, b.file_size,
         (SELECT COUNT(*) FROM chapters c WHERE c.book_id = b.id) AS total_chapters,
         (SELECT COUNT(*) FROM sentences s JOIN chapters c ON s.chapter_id = c.id WHERE c.book_id = b.id) AS total_sentences,
         (
@@ -170,7 +170,7 @@ export async function booksRoutes(server: FastifyInstance) {
       ORDER BY b.created_at DESC
     `).all() as Array<{
       id: string; title: string; author: string; cover_path: string | null;
-      created_at: number; tts_status: string; total_chapters: number; total_sentences: number;
+      created_at: number; tts_status: string; file_size: number; total_chapters: number; total_sentences: number;
       progress: number | null;
     }>;
 
@@ -183,6 +183,7 @@ export async function booksRoutes(server: FastifyInstance) {
       totalChapters: r.total_chapters,
       totalSentences: r.total_sentences,
       progress: r.progress !== null ? r.progress / 100 : null,
+      fileSize: r.file_size,
       ttsStatus: r.tts_status as Book['ttsStatus'],
     }));
 
