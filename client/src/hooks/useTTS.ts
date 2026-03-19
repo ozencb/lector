@@ -98,12 +98,16 @@ export function useTTS({ sentenceId, prefetchIds, onEnd }: UseTTSOptions) {
 
     for (const id of prefetchIds) {
       const url = getTtsAudioUrl(id);
+      let retries = 0;
+      const maxRetries = 5;
       const doFetch = () => {
         fetch(url, { signal: controller.signal }).then(res => {
-          if (res.status === 404 && !controller.signal.aborted) {
+          if (res.status === 404 && !controller.signal.aborted && retries < maxRetries) {
+            retries++;
+            const delay = 3000 * Math.pow(2, retries - 1); // 3s, 6s, 12s, 24s, 48s
             setTimeout(() => {
               if (!controller.signal.aborted) doFetch();
-            }, 3000);
+            }, delay);
           }
         }).catch(() => {});
       };

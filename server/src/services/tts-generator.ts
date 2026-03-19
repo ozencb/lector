@@ -6,6 +6,8 @@ import type { TtsStatus } from '@tts-reader/shared';
 
 const TTS_SERVICE_URL = process.env.TTS_SERVICE_URL || 'http://localhost:5000';
 const TTS_DIR = 'data/tts';
+const SYNTHESIS_TIMEOUT_MS = 30_000;
+const MAX_CONNECTION_RETRIES = 10;
 
 mkdirSync(TTS_DIR, { recursive: true });
 
@@ -18,6 +20,8 @@ interface QueueItem {
 
 const queue: QueueItem[] = [];
 let processing = false;
+let currentAbort: AbortController | null = null;
+let currentBookId: string | null = null;
 
 export function enqueueBookGeneration(
   bookId: string,
@@ -26,6 +30,39 @@ export function enqueueBookGeneration(
   errorBehavior: string = 'skip',
 ): void {
   queue.push({ bookId, voice, language, errorBehavior });
+  if (!processing) {
+    void startProcessing();
+  }
+}
+
+export function prioritizeBook(
+  bookId: string,
+  voice: string,
+  language: string,
+  errorBehavior: string = 'skip',
+): void {
+  // Already generating this book — nothing to do
+  if (currentBookId === bookId) return;
+
+  // Remove from queue if already queued
+  const idx = queue.findIndex(q => q.bookId === bookId);
+  if (idx !== -1) queue.splice(idx, 1);
+
+  // If something is currently generating, abort it and re-queue at front
+  if (currentAbort && currentBookId) {
+    const db = getDb();
+    db.prepare(`UPDATE books SET tts_status = 'pending' WHERE id = ?`).run(currentBookId);
+    // Find the interrupted book's info to re-queue
+    const interrupted = db.prepare(`SELECT tts_voice, tts_language FROM books WHERE id = ?`)
+      .get(currentBookId) as { tts_voice: string; tts_language: string } | undefined;
+    currentAbort.abort();
+    if (interrupted) {
+      queue.unshift({ bookId: currentBookId, voice: interrupted.tts_voice, language: interrupted.tts_language, errorBehavior: 'skip' });
+    }
+  }
+
+  // Queue the priority book at front
+  queue.unshift({ bookId, voice, language, errorBehavior });
   if (!processing) {
     void startProcessing();
   }
@@ -47,6 +84,9 @@ async function processBook(
   errorBehavior: string,
 ): Promise<void> {
   const db = getDb();
+  const abort = new AbortController();
+  currentAbort = abort;
+  currentBookId = bookId;
 
   const sentences = db.prepare(`
     SELECT s.id, s.text
@@ -67,6 +107,7 @@ async function processBook(
   const bookExists = db.prepare(`SELECT 1 FROM books WHERE id = ?`);
 
   for (const sentence of sentences) {
+    if (abort.signal.aborted) return;
     if (!bookExists.get(bookId)) return;
 
     const hash = createHash('sha256')
@@ -81,7 +122,9 @@ async function processBook(
       continue;
     }
 
-    const result = await synthesize(sentence.text, voice, language);
+    const result = await synthesize(sentence.text, voice, language, abort.signal);
+
+    if (abort.signal.aborted) return;
 
     if (result) {
       const buf = Buffer.from(result);
@@ -96,37 +139,51 @@ async function processBook(
     }
   }
 
-  db.prepare(`UPDATE books SET tts_status = 'completed' WHERE id = ?`).run(bookId);
+  if (!abort.signal.aborted) {
+    db.prepare(`UPDATE books SET tts_status = 'completed' WHERE id = ?`).run(bookId);
+  }
+
+  if (currentBookId === bookId) {
+    currentAbort = null;
+    currentBookId = null;
+  }
 }
 
 async function synthesize(
   text: string,
   voice: string,
   language: string,
+  signal: AbortSignal,
 ): Promise<ArrayBuffer | null> {
   const maxRetries = 3;
   const backoffs = [1000, 2000, 4000];
+  let connectionRetries = 0;
 
   for (let attempt = 0; attempt < maxRetries; attempt++) {
+    if (signal.aborted) return null;
     try {
       const res = await fetch(`${TTS_SERVICE_URL}/synthesize`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ text, voice, language }),
+        signal: AbortSignal.any([signal, AbortSignal.timeout(SYNTHESIS_TIMEOUT_MS)]),
       });
 
       if (res.ok) {
         return await res.arrayBuffer();
       }
 
-      // Non-ok response — retry with backoff
       if (attempt < maxRetries - 1) {
         await sleep(backoffs[attempt]);
       }
-    } catch {
-      // Connection error — retry indefinitely with 5s interval
-      await sleep(5000);
-      attempt--; // Don't count connection errors toward retry limit
+    } catch (err) {
+      if (signal.aborted) return null;
+      // Connection/timeout error — retry with exponential backoff, capped
+      connectionRetries++;
+      if (connectionRetries >= MAX_CONNECTION_RETRIES) return null;
+      const delay = Math.min(5000 * Math.pow(2, connectionRetries - 1), 60_000);
+      await sleep(delay);
+      attempt--; // Don't count connection errors toward response-retry limit
     }
   }
 

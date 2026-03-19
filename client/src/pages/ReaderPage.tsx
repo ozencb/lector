@@ -13,7 +13,7 @@ import * as Switch from '@radix-ui/react-switch';
 import WheelPicker from '../components/WheelPicker.js';
 import ThemeToggle from '../components/ThemeToggle.js';
 import type { BookDetail, ChapterDetail } from '@tts-reader/shared';
-import { getBook, getChapter, getProgress, updateProgress, updateProgressBeacon } from '../services/api.js';
+import { getBook, getChapter, getProgress, updateProgress, updateProgressBeacon, prioritizeBookAudio } from '../services/api.js';
 import { useTTS } from '../hooks/useTTS.js';
 import { debounce } from '../utils/debounce.js';
 import styles from './ReaderPage.module.scss';
@@ -63,6 +63,11 @@ export default function ReaderPage() {
         const bookData = await getBook(bookId);
         if (cancelled) return;
         setBook(bookData);
+
+        // Auto-prioritize TTS generation for the book being read
+        if (bookData.ttsStatus !== 'completed') {
+          prioritizeBookAudio(bookId).catch(() => {});
+        }
 
         let targetChapterIdx = 0;
         let targetSentenceIdx = 0;

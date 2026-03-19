@@ -1,13 +1,14 @@
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import type { Book } from '@tts-reader/shared';
-import { getTtsStatus, regenerateBookAudio } from '../services/api.js';
+import { getTtsStatus, regenerateBookAudio, prioritizeBookAudio } from '../services/api.js';
 import styles from './BookTable.module.scss';
 
 interface BookTableProps {
   books: Book[];
   onDelete?: (id: string) => void;
   onRetry?: (id: string) => void;
+  onPrioritize?: (id: string) => void;
 }
 
 function formatSize(bytes: number): string {
@@ -47,7 +48,11 @@ function TtsCell({ book, onRetry }: { book: Book; onRetry?: (id: string) => void
     case 'completed':
       return <span className={styles.statusDone}>Done</span>;
     case 'generating':
-      return <span className={styles.statusGenerating}>{completed}/{total}</span>;
+      return (
+        <span className={styles.statusGenerating}>
+          {completed}/{total}
+        </span>
+      );
     case 'failed':
       return (
         <span className={styles.statusFailed}>
@@ -55,11 +60,15 @@ function TtsCell({ book, onRetry }: { book: Book; onRetry?: (id: string) => void
         </span>
       );
     case 'pending':
-      return <span className={styles.statusPending}>Pending</span>;
+      return (
+        <span className={styles.statusPending}>
+          Pending
+        </span>
+      );
   }
 }
 
-export default function BookTable({ books, onDelete, onRetry }: BookTableProps) {
+export default function BookTable({ books, onDelete, onRetry, onPrioritize }: BookTableProps) {
   const navigate = useNavigate();
 
   return (
@@ -92,6 +101,14 @@ export default function BookTable({ books, onDelete, onRetry }: BookTableProps) 
                   {pct > 0 ? `${pct}%` : '—'}
                 </td>
                 <td className={styles.actionsCell}>
+                  {(book.ttsStatus === 'pending' || book.ttsStatus === 'generating') && (
+                    <button
+                      className={styles.prioritizeBtn}
+                      onClick={async (e) => { e.stopPropagation(); await prioritizeBookAudio(book.id); onPrioritize?.(book.id); }}
+                    >
+                      Prioritize
+                    </button>
+                  )}
                   <button
                     className={styles.deleteBtn}
                     onClick={(e) => { e.stopPropagation(); onDelete?.(book.id); }}

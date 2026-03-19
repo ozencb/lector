@@ -2,7 +2,7 @@ import { FastifyInstance } from 'fastify';
 import { readFileSync, existsSync, writeFileSync, mkdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { getDb } from '../db.js';
-import { enqueueBookGeneration, getBookTtsStatus } from '../services/tts-generator.js';
+import { enqueueBookGeneration, getBookTtsStatus, prioritizeBook } from '../services/tts-generator.js';
 
 const TTS_SERVICE_URL = process.env.TTS_SERVICE_URL || 'http://localhost:5000';
 
@@ -70,6 +70,27 @@ export async function ttsRoutes(server: FastifyInstance) {
       .header('Cache-Control', 'public, immutable, max-age=31536000')
       .send(audioBuffer);
   });
+
+  // POST /api/books/:id/prioritize
+  server.post<{ Params: { id: string } }>(
+    '/api/books/:id/prioritize',
+    async (request, reply) => {
+      const db = getDb();
+      const book = db.prepare('SELECT id, tts_status, tts_voice, tts_language FROM books WHERE id = ?')
+        .get(request.params.id) as { id: string; tts_status: string; tts_voice: string; tts_language: string } | undefined;
+
+      if (!book) {
+        return reply.status(404).send({ error: 'Book not found' });
+      }
+
+      if (book.tts_status === 'completed') {
+        return reply.send({ status: 'already_completed' });
+      }
+
+      prioritizeBook(book.id, book.tts_voice, book.tts_language);
+      return reply.send({ status: 'prioritized' });
+    },
+  );
 
   // POST /api/books/:id/regenerate
   server.post<{ Params: { id: string }; Querystring: { errorBehavior?: string } }>(

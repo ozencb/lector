@@ -4,7 +4,7 @@ import * as AlertDialog from '@radix-ui/react-alert-dialog';
 import * as Dialog from '@radix-ui/react-dialog';
 import type { Book } from '@tts-reader/shared';
 import { useNavigate } from 'react-router-dom';
-import { getTtsStatus, regenerateBookAudio } from '../services/api.js';
+import { getTtsStatus, regenerateBookAudio, prioritizeBookAudio } from '../services/api.js';
 import styles from './BookCard.module.scss';
 
 function formatSize(bytes: number): string {
@@ -27,9 +27,10 @@ interface BookCardProps {
   book: Book;
   onDelete?: (id: string) => void;
   onRetry?: (id: string) => void;
+  onPrioritize?: (id: string) => void;
 }
 
-export default function BookCard({ book, onDelete, onRetry }: BookCardProps) {
+export default function BookCard({ book, onDelete, onRetry, onPrioritize }: BookCardProps) {
   const navigate = useNavigate();
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [infoOpen, setInfoOpen] = useState(false);
@@ -124,6 +125,19 @@ export default function BookCard({ book, onDelete, onRetry }: BookCardProps) {
             >
               Info
             </ContextMenu.Item>
+            {(ttsStatus === 'pending' || ttsStatus === 'generating') && (
+              <>
+                <ContextMenu.Separator className={styles.contextMenuSeparator} />
+                <ContextMenu.Item
+                  className={styles.contextMenuItemDefault}
+                  onSelect={() => {
+                    prioritizeBookAudio(book.id).then(() => onPrioritize?.(book.id)).catch(() => {});
+                  }}
+                >
+                  Prioritize Audio
+                </ContextMenu.Item>
+              </>
+            )}
             <ContextMenu.Separator className={styles.contextMenuSeparator} />
             <ContextMenu.Item
               className={styles.contextMenuItem}

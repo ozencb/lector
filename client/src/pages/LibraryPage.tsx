@@ -140,13 +140,13 @@ export default function LibraryPage() {
       {!loading && !error && books.length > 0 && viewMode === 'grid' && (
         <div className={styles.grid}>
           {books.map((book) => (
-            <BookCard key={book.id} book={book} onDelete={handleDelete} onRetry={fetchBooks} />
+            <BookCard key={book.id} book={book} onDelete={handleDelete} onRetry={fetchBooks} onPrioritize={fetchBooks} />
           ))}
         </div>
       )}
 
       {!loading && !error && books.length > 0 && viewMode === 'table' && (
-        <BookTable books={books} onDelete={handleDelete} onRetry={fetchBooks} />
+        <BookTable books={books} onDelete={handleDelete} onRetry={fetchBooks} onPrioritize={fetchBooks} />
       )}
       <ImportModal open={importModalOpen} onOpenChange={setImportModalOpen} onConfirm={handleImportConfirm} />
       <SettingsPanel open={settingsOpen} onOpenChange={setSettingsOpen} />

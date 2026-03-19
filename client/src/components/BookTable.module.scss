@@ -84,6 +84,16 @@
   color: var(--color-text-muted);
 }
 
+.prioritizeBtn {
+  background: none;
+  border: none;
+  color: var(--color-accent);
+  font-size: 0.8rem;
+  cursor: pointer;
+  padding: 0 4px;
+  text-decoration: underline;
+}
+
 .retryBtn {
   background: none;
   border: none;
