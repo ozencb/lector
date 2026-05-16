@@ -1,0 +1,74 @@
+.wheel {
+  position: relative;
+  overflow: hidden;
+  width: 100%;
+}
+
+.list {
+  position: relative;
+  z-index: 2;
+  height: 100%;
+  overflow-y: auto;
+  scroll-snap-type: y mandatory;
+  -webkit-overflow-scrolling: touch;
+
+  // Hide scrollbar
+  scrollbar-width: none;
+  &::-webkit-scrollbar { display: none; }
+}
+
+.item {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  border: none;
+  background: none;
+  color: var(--color-text-muted);
+  font-size: 1rem;
+  scroll-snap-align: center;
+  transition: color 0.15s, opacity 0.15s;
+  opacity: 0.4;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+
+  &:hover {
+    opacity: 0.7;
+  }
+}
+
+.itemActive {
+  color: var(--color-text);
+  font-weight: 600;
+  font-size: 1.125rem;
+  opacity: 1;
+}
+
+.highlight {
+  position: absolute;
+  left: 8px;
+  right: 8px;
+  border-radius: 8px;
+  background: var(--color-surface-hover);
+  pointer-events: none;
+  z-index: 1;
+}
+
+.fadeTop,
+.fadeBottom {
+  position: absolute;
+  left: 0;
+  right: 0;
+  pointer-events: none;
+  z-index: 3;
+}
+
+.fadeTop {
+  top: 0;
+  background: linear-gradient(to bottom, var(--color-surface) 0%, transparent 100%);
+}
+
+.fadeBottom {
+  bottom: 0;
+  background: linear-gradient(to top, var(--color-surface) 0%, transparent 100%);
+}
