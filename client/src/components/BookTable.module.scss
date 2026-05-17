@@ -138,3 +138,37 @@
     background: var(--color-danger-subtle);
   }
 }
+
+@media (max-width: 768px) {
+  .sizeCell,
+  .actionsCell {
+    display: none;
+  }
+
+  .table th:nth-child(4),
+  .table th:nth-child(6) {
+    display: none;
+  }
+
+  .titleCell {
+    max-width: 200px;
+  }
+
+  .authorCell {
+    max-width: 120px;
+  }
+}
+
+@media (max-width: 480px) {
+  .authorCell {
+    display: none;
+  }
+
+  .table th:nth-child(2) {
+    display: none;
+  }
+
+  .titleCell {
+    max-width: 160px;
+  }
+}

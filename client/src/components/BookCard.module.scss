@@ -287,3 +287,17 @@
     font-variant-numeric: tabular-nums;
   }
 }
+
+@media (max-width: 480px) {
+  .info {
+    padding: 8px 10px;
+  }
+
+  .title {
+    font-size: 0.75rem;
+  }
+
+  .author {
+    font-size: 0.6875rem;
+  }
+}

@@ -400,3 +400,61 @@
   0%, 60% { opacity: 1; }
   100% { opacity: 0; }
 }
+
+@media (max-width: 768px) {
+  .sentenceArea {
+    padding: 32px 24px;
+    gap: 16px;
+  }
+
+  .currentSentence {
+    font-size: 1.25rem;
+  }
+
+  .focusLabel {
+    display: none;
+  }
+}
+
+@media (max-width: 480px) {
+  .header {
+    padding: 8px 12px;
+    gap: 8px;
+  }
+
+  .chapterIndicator {
+    padding: 3px 8px;
+    font-size: 0.6875rem;
+  }
+
+  .sentenceArea {
+    padding: 24px 16px;
+    gap: 12px;
+  }
+
+  .currentSentence {
+    font-size: 1.125rem;
+    line-height: 1.6;
+  }
+
+  .prevSentence,
+  .nextSentence {
+    font-size: 0.8125rem;
+  }
+
+  .controls {
+    gap: 8px;
+    padding: 10px 12px;
+    padding-bottom: max(10px, env(safe-area-inset-bottom));
+  }
+
+  .iconButton {
+    width: 36px;
+    height: 36px;
+  }
+
+  .playButton {
+    width: 44px;
+    height: 44px;
+  }
+}
