@@ -101,7 +101,7 @@ export default function BookTable({ books, onDelete, onRetry, onPrioritize }: Bo
                   {pct > 0 ? `${pct}%` : '—'}
                 </td>
                 <td className={styles.actionsCell}>
-                  {(book.ttsStatus === 'pending' || book.ttsStatus === 'generating') && (
+                  {book.ttsStatus === 'pending' && (
                     <button
                       className={styles.prioritizeBtn}
                       onClick={async (e) => { e.stopPropagation(); await prioritizeBookAudio(book.id); onPrioritize?.(book.id); }}

@@ -125,7 +125,7 @@ export default function BookCard({ book, onDelete, onRetry, onPrioritize }: Book
             >
               Info
             </ContextMenu.Item>
-            {(ttsStatus === 'pending' || ttsStatus === 'generating') && (
+            {ttsStatus === 'pending' && (
               <>
                 <ContextMenu.Separator className={styles.contextMenuSeparator} />
                 <ContextMenu.Item
