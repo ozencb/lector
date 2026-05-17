@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useCallback, useEffect, useRef, useState } from "react";
+import { useNavigate, useParams } from "react-router-dom";
 import {
   ArrowLeftIcon,
   ChevronLeftIcon,
@@ -7,27 +7,34 @@ import {
   PlayIcon,
   PauseIcon,
   TimerIcon,
-} from '@radix-ui/react-icons';
-import * as Dialog from '@radix-ui/react-dialog';
-import * as Switch from '@radix-ui/react-switch';
-import WheelPicker from '../components/WheelPicker.js';
-import ThemeToggle from '../components/ThemeToggle.js';
-import type { BookDetail, ChapterDetail } from '@tts-reader/shared';
-import { getBook, getChapter, getProgress, updateProgress, updateProgressBeacon, prioritizeBookAudio } from '../services/api.js';
-import { useTTS } from '../hooks/useTTS.js';
-import { debounce } from '../utils/debounce.js';
-import styles from './ReaderPage.module.scss';
+} from "@radix-ui/react-icons";
+import * as Dialog from "@radix-ui/react-dialog";
+import * as Switch from "@radix-ui/react-switch";
+import WheelPicker from "../components/WheelPicker.js";
+import ThemeToggle from "../components/ThemeToggle.js";
+import type { BookDetail, ChapterDetail } from "@tts-reader/shared";
+import {
+  getBook,
+  getChapter,
+  getProgress,
+  updateProgress,
+  updateProgressBeacon,
+  prioritizeBookAudio,
+} from "../services/api.js";
+import { useTTS } from "../hooks/useTTS.js";
+import { debounce } from "../utils/debounce.js";
+import styles from "./ReaderPage.module.scss";
 
 const SPEED_OPTIONS = [
-  { label: '0.50x', value: '0.50' },
-  { label: '0.75x', value: '0.75' },
-  { label: '1.00x', value: '1.00' },
-  { label: '1.25x', value: '1.25' },
-  { label: '1.50x', value: '1.50' },
-  { label: '1.75x', value: '1.75' },
-  { label: '2.00x', value: '2.00' },
-  { label: '2.50x', value: '2.50' },
-  { label: '3.00x', value: '3.00' },
+  { label: "0.50x", value: "0.50" },
+  { label: "0.75x", value: "0.75" },
+  { label: "1.00x", value: "1.00" },
+  { label: "1.25x", value: "1.25" },
+  { label: "1.50x", value: "1.50" },
+  { label: "1.75x", value: "1.75" },
+  { label: "2.00x", value: "2.00" },
+  { label: "2.50x", value: "2.50" },
+  { label: "3.00x", value: "3.00" },
 ];
 
 export default function ReaderPage() {
@@ -40,18 +47,23 @@ export default function ReaderPage() {
   const [sentenceIdx, setSentenceIdx] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [focusMode, setFocusMode] = useState(() => localStorage.getItem('focusMode') === 'true');
+  const [focusMode, setFocusMode] = useState(
+    () => localStorage.getItem("focusMode") === "true",
+  );
 
   // Cache loaded chapters to avoid refetching
   const chapterCache = useRef<Map<string, ChapterDetail>>(new Map());
 
-  const loadChapter = useCallback(async (chapterId: string): Promise<ChapterDetail> => {
-    const cached = chapterCache.current.get(chapterId);
-    if (cached) return cached;
-    const data = await getChapter(chapterId);
-    chapterCache.current.set(chapterId, data);
-    return data;
-  }, []);
+  const loadChapter = useCallback(
+    async (chapterId: string): Promise<ChapterDetail> => {
+      const cached = chapterCache.current.get(chapterId);
+      if (cached) return cached;
+      const data = await getChapter(chapterId);
+      chapterCache.current.set(chapterId, data);
+      return data;
+    },
+    [],
+  );
 
   // Initial load: fetch book + progress, load correct chapter
   useEffect(() => {
@@ -65,7 +77,7 @@ export default function ReaderPage() {
         setBook(bookData);
 
         // Auto-prioritize TTS generation for the book being read
-        if (bookData.ttsStatus !== 'completed') {
+        if (bookData.ttsStatus !== "completed") {
           prioritizeBookAudio(bookId).catch(() => {});
         }
 
@@ -90,13 +102,15 @@ export default function ReaderPage() {
         setLoading(false);
       } catch (err) {
         if (!cancelled) {
-          setError(err instanceof Error ? err.message : 'Failed to load book');
+          setError(err instanceof Error ? err.message : "Failed to load book");
           setLoading(false);
         }
       }
     })();
 
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, [bookId, loadChapter]);
 
   // Preload adjacent chapters
@@ -105,66 +119,78 @@ export default function ReaderPage() {
     const prevIdx = chapterIdx - 1;
     const nextIdx = chapterIdx + 1;
     if (prevIdx >= 0) loadChapter(book.chapters[prevIdx].id).catch(() => {});
-    if (nextIdx < book.chapters.length) loadChapter(book.chapters[nextIdx].id).catch(() => {});
+    if (nextIdx < book.chapters.length)
+      loadChapter(book.chapters[nextIdx].id).catch(() => {});
   }, [book, chapterIdx, loadChapter]);
 
   // Update page title
   useEffect(() => {
     if (book) {
-      document.title = `${book.title} — TTS Reader`;
+      document.title = `${book.title} — Lector`;
     }
-    return () => { document.title = 'TTS Reader'; };
+    return () => {
+      document.title = "Lector";
+    };
   }, [book]);
 
-  const goToSentence = useCallback(async (dir: 'next' | 'prev') => {
-    if (!book || !chapter) return;
+  const goToSentence = useCallback(
+    async (dir: "next" | "prev") => {
+      if (!book || !chapter) return;
 
-    if (dir === 'next') {
-      if (sentenceIdx < chapter.sentences.length - 1) {
-        setSentenceIdx(sentenceIdx + 1);
-      } else {
-        // Find next chapter with sentences (skip empty)
-        let nextIdx = chapterIdx + 1;
-        while (nextIdx < book.chapters.length) {
-          try {
-            const nextCh = await loadChapter(book.chapters[nextIdx].id);
-            if (nextCh.sentences.length > 0) {
-              setChapter(nextCh);
-              setChapterIdx(nextIdx);
-              setSentenceIdx(0);
-              return;
+      if (dir === "next") {
+        if (sentenceIdx < chapter.sentences.length - 1) {
+          setSentenceIdx(sentenceIdx + 1);
+        } else {
+          // Find next chapter with sentences (skip empty)
+          let nextIdx = chapterIdx + 1;
+          while (nextIdx < book.chapters.length) {
+            try {
+              const nextCh = await loadChapter(book.chapters[nextIdx].id);
+              if (nextCh.sentences.length > 0) {
+                setChapter(nextCh);
+                setChapterIdx(nextIdx);
+                setSentenceIdx(0);
+                return;
+              }
+            } catch {
+              /* skip */
             }
-          } catch { /* skip */ }
-          nextIdx++;
+            nextIdx++;
+          }
+        }
+      } else {
+        if (sentenceIdx > 0) {
+          setSentenceIdx(sentenceIdx - 1);
+        } else {
+          // Find prev chapter with sentences (skip empty)
+          let prevIdx = chapterIdx - 1;
+          while (prevIdx >= 0) {
+            try {
+              const prevCh = await loadChapter(book.chapters[prevIdx].id);
+              if (prevCh.sentences.length > 0) {
+                setChapter(prevCh);
+                setChapterIdx(prevIdx);
+                setSentenceIdx(prevCh.sentences.length - 1);
+                return;
+              }
+            } catch {
+              /* skip */
+            }
+            prevIdx--;
+          }
         }
       }
-    } else {
-      if (sentenceIdx > 0) {
-        setSentenceIdx(sentenceIdx - 1);
-      } else {
-        // Find prev chapter with sentences (skip empty)
-        let prevIdx = chapterIdx - 1;
-        while (prevIdx >= 0) {
-          try {
-            const prevCh = await loadChapter(book.chapters[prevIdx].id);
-            if (prevCh.sentences.length > 0) {
-              setChapter(prevCh);
-              setChapterIdx(prevIdx);
-              setSentenceIdx(prevCh.sentences.length - 1);
-              return;
-            }
-          } catch { /* skip */ }
-          prevIdx--;
-        }
-      }
-    }
-  }, [book, chapter, chapterIdx, sentenceIdx, loadChapter]);
+    },
+    [book, chapter, chapterIdx, sentenceIdx, loadChapter],
+  );
 
   const currentSentence = chapter?.sentences[sentenceIdx];
 
-  const isAtEnd = book && chapter && chapter.sentences.length > 0
-    ? chapterIdx === book.chapters.length - 1 && sentenceIdx === chapter.sentences.length - 1
-    : false;
+  const isAtEnd =
+    book && chapter && chapter.sentences.length > 0
+      ? chapterIdx === book.chapters.length - 1 &&
+        sentenceIdx === chapter.sentences.length - 1
+      : false;
 
   const isAtEndRef = useRef(false);
   isAtEndRef.current = isAtEnd;
@@ -176,17 +202,17 @@ export default function ReaderPage() {
     sentenceId: currentSentence?.id,
     prefetchIds: chapter?.sentences
       .slice(sentenceIdx + 1, sentenceIdx + 6)
-      .map(s => s.id),
+      .map((s) => s.id),
     onEnd: useCallback(() => {
       if (isAtEndRef.current) return false;
-      goToSentenceRef.current('next');
+      goToSentenceRef.current("next");
     }, []),
   });
   // --- Progress saving ---
   const debouncedSave = useRef(
     debounce((bId: string, sId: string) => {
       updateProgress(bId, sId).catch(() => {});
-    }, 5000)
+    }, 5000),
   ).current;
 
   // Save progress on sentence change (debounced)
@@ -218,9 +244,9 @@ export default function ReaderPage() {
         updateProgressBeacon(bookIdRef.current, sentenceRef.current.id);
       }
     };
-    window.addEventListener('beforeunload', onUnload);
+    window.addEventListener("beforeunload", onUnload);
     return () => {
-      window.removeEventListener('beforeunload', onUnload);
+      window.removeEventListener("beforeunload", onUnload);
       debouncedSave.flush();
     };
   }, [debouncedSave]);
@@ -229,26 +255,40 @@ export default function ReaderPage() {
   const nextSentence = chapter?.sentences[sentenceIdx + 1];
 
   // Show prev chapter's last sentence if at start of current chapter
-  const [prevChapterLastSentence, setPrevChapterLastSentence] = useState<string | null>(null);
-  const [nextChapterFirstSentence, setNextChapterFirstSentence] = useState<string | null>(null);
+  const [prevChapterLastSentence, setPrevChapterLastSentence] = useState<
+    string | null
+  >(null);
+  const [nextChapterFirstSentence, setNextChapterFirstSentence] = useState<
+    string | null
+  >(null);
 
   useEffect(() => {
     if (!book || !chapter) return;
     // If at first sentence, get prev chapter's last sentence for display
     if (sentenceIdx === 0 && chapterIdx > 0) {
       const prevId = book.chapters[chapterIdx - 1].id;
-      loadChapter(prevId).then(ch => {
-        setPrevChapterLastSentence(ch.sentences[ch.sentences.length - 1]?.text ?? null);
-      }).catch(() => setPrevChapterLastSentence(null));
+      loadChapter(prevId)
+        .then((ch) => {
+          setPrevChapterLastSentence(
+            ch.sentences[ch.sentences.length - 1]?.text ?? null,
+          );
+        })
+        .catch(() => setPrevChapterLastSentence(null));
     } else {
       setPrevChapterLastSentence(null);
     }
     // If at last sentence, get next chapter's first sentence for display
-    if (chapter && sentenceIdx === chapter.sentences.length - 1 && chapterIdx < (book?.chapters.length ?? 0) - 1) {
+    if (
+      chapter &&
+      sentenceIdx === chapter.sentences.length - 1 &&
+      chapterIdx < (book?.chapters.length ?? 0) - 1
+    ) {
       const nextId = book.chapters[chapterIdx + 1].id;
-      loadChapter(nextId).then(ch => {
-        setNextChapterFirstSentence(ch.sentences[0]?.text ?? null);
-      }).catch(() => setNextChapterFirstSentence(null));
+      loadChapter(nextId)
+        .then((ch) => {
+          setNextChapterFirstSentence(ch.sentences[0]?.text ?? null);
+        })
+        .catch(() => setNextChapterFirstSentence(null));
     } else {
       setNextChapterFirstSentence(null);
     }
@@ -256,25 +296,28 @@ export default function ReaderPage() {
 
   const toggleFocusMode = useCallback((checked: boolean) => {
     setFocusMode(checked);
-    localStorage.setItem('focusMode', String(checked));
+    localStorage.setItem("focusMode", String(checked));
   }, []);
 
   const [chapterDialogOpen, setChapterDialogOpen] = useState(false);
   const [speedPickerOpen, setSpeedPickerOpen] = useState(false);
 
-  const jumpToChapter = useCallback(async (idx: number) => {
-    if (!book) return;
-    tts.pause();
-    try {
-      const ch = await loadChapter(book.chapters[idx].id);
-      setChapter(ch);
-      setChapterIdx(idx);
-      setSentenceIdx(0);
-      setChapterDialogOpen(false);
-    } catch {
-      // Failed to load chapter
-    }
-  }, [book, loadChapter, tts]);
+  const jumpToChapter = useCallback(
+    async (idx: number) => {
+      if (!book) return;
+      tts.pause();
+      try {
+        const ch = await loadChapter(book.chapters[idx].id);
+        setChapter(ch);
+        setChapterIdx(idx);
+        setSentenceIdx(0);
+        setChapterDialogOpen(false);
+      } catch {
+        // Failed to load chapter
+      }
+    },
+    [book, loadChapter, tts],
+  );
 
   const displayPrev = prevSentence?.text ?? prevChapterLastSentence;
   const displayNext = nextSentence?.text ?? nextChapterFirstSentence;
@@ -299,10 +342,10 @@ export default function ReaderPage() {
     const onKeyDown = (e: KeyboardEvent) => {
       // Don't handle if focus is in an input/textarea
       const tag = (e.target as HTMLElement)?.tagName;
-      if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
+      if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") return;
 
       switch (e.key) {
-        case ' ':
+        case " ":
           e.preventDefault();
           if (ttsRef.current.isPlaying) {
             pauseWithSaveRef.current();
@@ -310,15 +353,15 @@ export default function ReaderPage() {
             ttsRef.current.play();
           }
           break;
-        case 'ArrowLeft':
+        case "ArrowLeft":
           e.preventDefault();
-          goToSentenceRef.current('prev');
+          goToSentenceRef.current("prev");
           break;
-        case 'ArrowRight':
+        case "ArrowRight":
           e.preventDefault();
-          goToSentenceRef.current('next');
+          goToSentenceRef.current("next");
           break;
-        case '[': {
+        case "[": {
           const cur = ttsRef.current.speed;
           const next = Math.max(0.5, cur - 0.25);
           if (next !== cur) {
@@ -327,7 +370,7 @@ export default function ReaderPage() {
           }
           break;
         }
-        case ']': {
+        case "]": {
           const cur = ttsRef.current.speed;
           const next = Math.min(3.0, cur + 0.25);
           if (next !== cur) {
@@ -338,9 +381,9 @@ export default function ReaderPage() {
         }
       }
     };
-    window.addEventListener('keydown', onKeyDown);
+    window.addEventListener("keydown", onKeyDown);
     return () => {
-      window.removeEventListener('keydown', onKeyDown);
+      window.removeEventListener("keydown", onKeyDown);
       clearTimeout(speedToastTimer.current);
     };
   }, [showSpeedToast]);
@@ -352,8 +395,10 @@ export default function ReaderPage() {
   if (error || !book || !chapter || !currentSentence) {
     return (
       <div className={styles.errorState}>
-        <p>{error || 'Book not found'}</p>
-        <button className={styles.backLink} onClick={() => navigate('/')}>Back to Library</button>
+        <p>{error || "Book not found"}</p>
+        <button className={styles.backLink} onClick={() => navigate("/")}>
+          Back to Library
+        </button>
       </div>
     );
   }
@@ -362,11 +407,18 @@ export default function ReaderPage() {
     <div className={styles.page}>
       {/* Header */}
       <header className={styles.header}>
-        <button className={styles.iconButton} onClick={() => navigate('/')} aria-label="Back to library">
+        <button
+          className={styles.iconButton}
+          onClick={() => navigate("/")}
+          aria-label="Back to library"
+        >
           <ArrowLeftIcon width={20} height={20} />
         </button>
         <span className={styles.bookTitle}>{book.title}</span>
-        <Dialog.Root open={chapterDialogOpen} onOpenChange={setChapterDialogOpen}>
+        <Dialog.Root
+          open={chapterDialogOpen}
+          onOpenChange={setChapterDialogOpen}
+        >
           <Dialog.Trigger asChild>
             <button className={styles.chapterIndicator}>
               Ch {chapterIdx + 1}/{book.chapters.length}
@@ -375,16 +427,20 @@ export default function ReaderPage() {
           <Dialog.Portal>
             <Dialog.Overlay className={styles.dialogOverlay} />
             <Dialog.Content className={styles.dialogContent}>
-              <Dialog.Title className={styles.dialogTitle}>Chapters</Dialog.Title>
+              <Dialog.Title className={styles.dialogTitle}>
+                Chapters
+              </Dialog.Title>
               <div className={styles.chapterList}>
                 {book.chapters.map((ch, idx) => (
                   <button
                     key={ch.id}
-                    className={`${styles.chapterItem} ${idx === chapterIdx ? styles.chapterItemActive : ''}`}
+                    className={`${styles.chapterItem} ${idx === chapterIdx ? styles.chapterItemActive : ""}`}
                     onClick={() => jumpToChapter(idx)}
                   >
                     <span className={styles.chapterNum}>{idx + 1}</span>
-                    <span className={styles.chapterTitle}>{ch.title || `Chapter ${idx + 1}`}</span>
+                    <span className={styles.chapterTitle}>
+                      {ch.title || `Chapter ${idx + 1}`}
+                    </span>
                   </button>
                 ))}
               </div>
@@ -406,39 +462,56 @@ export default function ReaderPage() {
 
       {/* Sentence display */}
       <div className={styles.sentenceArea}>
-        <div className={`${styles.prevSentence} ${focusMode ? styles.hidden : ''}`} key={`prev-${chapterIdx}-${sentenceIdx}`}>
-          {displayPrev ?? ''}
+        <div
+          className={`${styles.prevSentence} ${focusMode ? styles.hidden : ""}`}
+          key={`prev-${chapterIdx}-${sentenceIdx}`}
+        >
+          {displayPrev ?? ""}
         </div>
-        <div className={styles.currentSentence} key={`cur-${chapterIdx}-${sentenceIdx}`}>
+        <div
+          className={styles.currentSentence}
+          key={`cur-${chapterIdx}-${sentenceIdx}`}
+        >
           {currentSentence.text}
         </div>
-        <div className={`${styles.nextSentence} ${focusMode ? styles.hidden : ''}`} key={`next-${chapterIdx}-${sentenceIdx}`}>
-          {displayNext ?? ''}
+        <div
+          className={`${styles.nextSentence} ${focusMode ? styles.hidden : ""}`}
+          key={`next-${chapterIdx}-${sentenceIdx}`}
+        >
+          {displayNext ?? ""}
         </div>
       </div>
 
       {/* Controls */}
       <div className={styles.controls}>
-        <button className={styles.iconButton} onClick={() => setSpeedPickerOpen(true)} aria-label="Playback speed">
+        <button
+          className={styles.iconButton}
+          onClick={() => setSpeedPickerOpen(true)}
+          aria-label="Playback speed"
+        >
           <TimerIcon width={20} height={20} />
         </button>
         <button
           className={styles.iconButton}
-          onClick={() => goToSentence('prev')}
+          onClick={() => goToSentence("prev")}
           aria-label="Previous sentence"
         >
           <ChevronLeftIcon width={24} height={24} />
         </button>
         <button
           className={styles.playButton}
-          onClick={() => tts.isPlaying ? pauseWithSave() : tts.play()}
-          aria-label={tts.isPlaying ? 'Pause' : 'Play'}
+          onClick={() => (tts.isPlaying ? pauseWithSave() : tts.play())}
+          aria-label={tts.isPlaying ? "Pause" : "Play"}
         >
-          {tts.isPlaying ? <PauseIcon width={24} height={24} /> : <PlayIcon width={24} height={24} />}
+          {tts.isPlaying ? (
+            <PauseIcon width={24} height={24} />
+          ) : (
+            <PlayIcon width={24} height={24} />
+          )}
         </button>
         <button
           className={styles.iconButton}
-          onClick={() => goToSentence('next')}
+          onClick={() => goToSentence("next")}
           aria-label="Next sentence"
         >
           <ChevronRightIcon width={24} height={24} />
@@ -456,7 +529,12 @@ export default function ReaderPage() {
               value={tts.speed.toFixed(2)}
               onChange={(val) => tts.setSpeed(parseFloat(val))}
             />
-            <button className={styles.pickerDone} onClick={() => setSpeedPickerOpen(false)}>Done</button>
+            <button
+              className={styles.pickerDone}
+              onClick={() => setSpeedPickerOpen(false)}
+            >
+              Done
+            </button>
           </Dialog.Content>
         </Dialog.Portal>
       </Dialog.Root>
