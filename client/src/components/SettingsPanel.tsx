@@ -4,6 +4,8 @@ import * as Switch from '@radix-ui/react-switch';
 import { PlayIcon, StopIcon } from '@radix-ui/react-icons';
 import type { TtsVoice, TtsVoiceMap } from '@tts-reader/shared';
 import { getTtsDemoUrl, getTtsVoices } from '../services/api.js';
+import SegmentedControl from './SegmentedControl.js';
+import { FONT_SIZE_OPTIONS, DEFAULT_FONT_SIZE, FONT_SIZE_STORAGE_KEY } from '../constants/fontSize.js';
 import styles from './SettingsPanel.module.scss';
 
 interface SettingsPanelProps {
@@ -22,6 +24,7 @@ export default function SettingsPanel({ open, onOpenChange }: SettingsPanelProps
   const [voice, setVoice] = useState(() => readSetting('tts-default-voice', ''));
   const [skipImport, setSkipImport] = useState(() => readSetting('tts-skip-import-dialog', 'false') === 'true');
   const [errorBehavior, setErrorBehavior] = useState(() => readSetting('tts-error-behavior', 'skip'));
+  const [fontSize, setFontSize] = useState(() => readSetting(FONT_SIZE_STORAGE_KEY, DEFAULT_FONT_SIZE));
   const [demoPlaying, setDemoPlaying] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
@@ -80,6 +83,11 @@ export default function SettingsPanel({ open, onOpenChange }: SettingsPanelProps
   const handleErrorBehaviorChange = (val: string) => {
     setErrorBehavior(val);
     localStorage.setItem('tts-error-behavior', val);
+  };
+
+  const handleFontSizeChange = (val: string) => {
+    setFontSize(val);
+    localStorage.setItem(FONT_SIZE_STORAGE_KEY, val);
   };
 
   return (
@@ -147,6 +155,15 @@ export default function SettingsPanel({ open, onOpenChange }: SettingsPanelProps
               <option value="skip">Skip failed sentences</option>
               <option value="stop">Stop generation</option>
             </select>
+          </div>
+
+          <div className={styles.row}>
+            <label className={styles.label}>Reader font size</label>
+            <SegmentedControl
+              items={FONT_SIZE_OPTIONS}
+              value={fontSize}
+              onChange={handleFontSizeChange}
+            />
           </div>
 
           <button className={styles.done} onClick={() => onOpenChange(false)}>

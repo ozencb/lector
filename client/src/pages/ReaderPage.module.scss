@@ -215,7 +215,7 @@
 
 .prevSentence,
 .nextSentence {
-  font-size: 0.875rem;
+  font-size: calc(var(--reader-font-size, 1.375rem) * 0.64);
   line-height: 1.6;
   text-align: center;
   color: var(--color-text-muted);
@@ -232,7 +232,7 @@
 }
 
 .currentSentence {
-  font-size: 1.375rem;
+  font-size: var(--reader-font-size, 1.375rem);
   line-height: 1.7;
   text-align: center;
   font-weight: 500;
@@ -407,10 +407,6 @@
     gap: 16px;
   }
 
-  .currentSentence {
-    font-size: 1.25rem;
-  }
-
   .focusLabel {
     display: none;
   }
@@ -430,16 +426,6 @@
   .sentenceArea {
     padding: 24px 16px;
     gap: 12px;
-  }
-
-  .currentSentence {
-    font-size: 1.125rem;
-    line-height: 1.6;
-  }
-
-  .prevSentence,
-  .nextSentence {
-    font-size: 0.8125rem;
   }
 
   .controls {

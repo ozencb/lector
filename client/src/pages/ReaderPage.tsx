@@ -7,6 +7,7 @@ import {
   PlayIcon,
   PauseIcon,
   TimerIcon,
+  FontSizeIcon,
 } from "@radix-ui/react-icons";
 import * as Dialog from "@radix-ui/react-dialog";
 import * as Switch from "@radix-ui/react-switch";
@@ -23,6 +24,13 @@ import {
 } from "../services/api.js";
 import { useTTS } from "../hooks/useTTS.js";
 import { debounce } from "../utils/debounce.js";
+import SegmentedControl from "../components/SegmentedControl.js";
+import {
+  FONT_SIZE_OPTIONS,
+  DEFAULT_FONT_SIZE,
+  FONT_SIZE_STORAGE_KEY,
+  getFontSizeRem,
+} from "../constants/fontSize.js";
 import styles from "./ReaderPage.module.scss";
 
 const SPEED_OPTIONS = [
@@ -49,6 +57,9 @@ export default function ReaderPage() {
   const [error, setError] = useState<string | null>(null);
   const [focusMode, setFocusMode] = useState(
     () => localStorage.getItem("focusMode") === "true",
+  );
+  const [fontSize, setFontSize] = useState(
+    () => localStorage.getItem(FONT_SIZE_STORAGE_KEY) ?? DEFAULT_FONT_SIZE,
   );
 
   // Cache loaded chapters to avoid refetching
@@ -301,6 +312,12 @@ export default function ReaderPage() {
 
   const [chapterDialogOpen, setChapterDialogOpen] = useState(false);
   const [speedPickerOpen, setSpeedPickerOpen] = useState(false);
+  const [fontSizePickerOpen, setFontSizePickerOpen] = useState(false);
+
+  const handleFontSizeChange = useCallback((value: string) => {
+    setFontSize(value);
+    localStorage.setItem(FONT_SIZE_STORAGE_KEY, value);
+  }, []);
 
   const jumpToChapter = useCallback(
     async (idx: number) => {
@@ -404,7 +421,10 @@ export default function ReaderPage() {
   }
 
   return (
-    <div className={styles.page}>
+    <div
+      className={styles.page}
+      style={{ '--reader-font-size': getFontSizeRem(fontSize) } as React.CSSProperties}
+    >
       {/* Header */}
       <header className={styles.header}>
         <button
@@ -516,6 +536,13 @@ export default function ReaderPage() {
         >
           <ChevronRightIcon width={24} height={24} />
         </button>
+        <button
+          className={styles.iconButton}
+          onClick={() => setFontSizePickerOpen(true)}
+          aria-label="Font size"
+        >
+          <FontSizeIcon width={20} height={20} />
+        </button>
       </div>
 
       {/* Speed picker modal */}
@@ -532,6 +559,27 @@ export default function ReaderPage() {
             <button
               className={styles.pickerDone}
               onClick={() => setSpeedPickerOpen(false)}
+            >
+              Done
+            </button>
+          </Dialog.Content>
+        </Dialog.Portal>
+      </Dialog.Root>
+
+      {/* Font size picker modal */}
+      <Dialog.Root open={fontSizePickerOpen} onOpenChange={setFontSizePickerOpen}>
+        <Dialog.Portal>
+          <Dialog.Overlay className={styles.pickerOverlay} />
+          <Dialog.Content className={styles.pickerContent}>
+            <Dialog.Title className={styles.pickerTitle}>Font Size</Dialog.Title>
+            <SegmentedControl
+              items={FONT_SIZE_OPTIONS}
+              value={fontSize}
+              onChange={handleFontSizeChange}
+            />
+            <button
+              className={styles.pickerDone}
+              onClick={() => setFontSizePickerOpen(false)}
             >
               Done
             </button>
