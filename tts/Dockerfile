@@ -1,4 +1,4 @@
-FROM --platform=linux/amd64 python:3.11-slim
+FROM python:3.11-slim
 
 WORKDIR /app
 
@@ -9,8 +9,13 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 COPY requirements.txt .
 RUN --mount=type=cache,target=/root/.cache/pip \
-    pip install torch --index-url https://download.pytorch.org/whl/cpu \
-    && pip install -r requirements.txt
+    pip install -r requirements.txt
+
+RUN mkdir -p /app/models && \
+    curl -L -o /app/models/kokoro-v1.0.fp16.onnx \
+      https://github.com/thewh1teagle/kokoro-onnx/releases/download/model-files-v1.0/kokoro-v1.0.fp16.onnx && \
+    curl -L -o /app/models/voices-v1.0.bin \
+      https://github.com/thewh1teagle/kokoro-onnx/releases/download/model-files-v1.0/voices-v1.0.bin
 
 COPY main.py .
 

@@ -11,8 +11,8 @@ A minimalist epub reader that reads to you. One sentence at a time.
 Upload an epub, pick a voice, hit play. Lector reads aloud sentence by sentence using [Kokoro-82M](https://github.com/hexgrad/kokoro), a high-quality local TTS model. It remembers where you left off.
 
 - **Server-side TTS** — Kokoro-82M generates natural-sounding audio for every sentence, cached on disk
-- **Multi-language** — American/British English, Spanish, French, Hindi, Italian, Brazilian Portuguese (Japanese and Mandarin available with extra deps)
-- **Voice selection** — 50+ voices across languages, with preview/demo playback
+- **Multi-language** — American/British English, Spanish, French, Hindi, Italian, Brazilian Portuguese
+- **Voice selection** — 40+ voices across languages, with preview/demo playback
 - **Sentence-level focus** — one sentence highlighted at a time, context sentences faded around it
 - **Focus mode** — strip everything away, just the current sentence
 - **TTS controls** — play/pause, previous/next sentence, adjustable playback speed (0.5x–3.0x)
@@ -54,7 +54,7 @@ Upload an epub, pick a voice, hit play. Lector reads aloud sentence by sentence 
                                │                           │
                           ┌────▼──────┐              ┌─────▼─────┐
                           │  SQLite   │              │ Kokoro-82M │
-                          │  + disk   │              │  (PyTorch) │
+                          │  + disk   │              │(ONNX Runtime)│
                           └───────────┘              └───────────┘
 ```
 
@@ -62,7 +62,7 @@ Upload an epub, pick a voice, hit play. Lector reads aloud sentence by sentence 
 
 - **Frontend:** React 19 + Vite + TypeScript + Radix UI + SCSS
 - **Backend:** Fastify + TypeScript
-- **TTS:** Kokoro-82M via FastAPI sidecar (PyTorch, CPU)
+- **TTS:** Kokoro-82M via FastAPI sidecar (ONNX Runtime, CPU)
 - **Database:** SQLite (better-sqlite3)
 - **Audio format:** OGG/Vorbis, cached on disk, content-addressed by hash
 - **Monorepo:** pnpm workspaces
@@ -78,7 +78,7 @@ This starts two services:
 - **lector** — the main app on `http://localhost:3000`
 - **tts** — the Kokoro TTS service (internal, port 5000)
 
-The TTS model (~330MB) downloads on first startup. Model loading takes ~30s on CPU.
+The TTS model (~170MB fp16) is baked into the Docker image. Model loading takes ~1s.
 
 Data persists in `./data/` (SQLite DB, epub files, covers, cached audio).
 
