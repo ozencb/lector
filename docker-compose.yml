@@ -9,6 +9,7 @@ services:
     environment:
       - NODE_ENV=production
       - TTS_SERVICE_URL=http://tts:5000
+      - TTS_CONCURRENCY=2
     mem_limit: 512m
     depends_on:
       tts:
@@ -22,8 +23,8 @@ services:
       - ./data:/app/data
     environment:
       - IDLE_TIMEOUT_SECONDS=600
-    mem_limit: 2g
-    cpus: 1.0
+    mem_limit: 4g
+    cpus: 2.0
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:5000/health"]
       interval: 10s

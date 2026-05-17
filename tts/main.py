@@ -1,6 +1,7 @@
 import io
 import logging
 import os
+import tempfile
 import time
 import threading
 from typing import Optional
@@ -171,6 +172,9 @@ def _pregenerate_demos():
                 generated += 1
                 continue
             try:
+                if os.path.exists(cache_path):
+                    generated += 1
+                    continue
                 audio_chunks = pipeline_manager.synthesize(lang_code, text, voice_id)
                 if not audio_chunks:
                     continue
@@ -178,8 +182,15 @@ def _pregenerate_demos():
                 audio_np = audio.numpy() if isinstance(audio, torch.Tensor) else audio
                 buf = io.BytesIO()
                 sf.write(buf, audio_np, SAMPLE_RATE, format="OGG", subtype="VORBIS")
-                with open(cache_path, "wb") as f:
-                    f.write(buf.getvalue())
+                fd, tmp_path = tempfile.mkstemp(dir=DEMO_CACHE_DIR, suffix=".ogg")
+                try:
+                    os.write(fd, buf.getvalue())
+                    os.close(fd)
+                    os.rename(tmp_path, cache_path)
+                except BaseException:
+                    os.close(fd)
+                    os.unlink(tmp_path)
+                    raise
                 generated += 1
                 logger.info(f"Pre-generated demo {generated}/{total}: {voice_id}")
             except Exception as e:
@@ -235,8 +246,14 @@ def demo(voice_id: str):
     content = buf.getvalue()
 
     os.makedirs(DEMO_CACHE_DIR, exist_ok=True)
-    with open(cache_path, "wb") as f:
-        f.write(content)
+    fd, tmp_path = tempfile.mkstemp(dir=DEMO_CACHE_DIR, suffix=".ogg")
+    try:
+        os.write(fd, content)
+        os.close(fd)
+        os.rename(tmp_path, cache_path)
+    except BaseException:
+        os.close(fd)
+        os.unlink(tmp_path)
 
     return Response(content=content, media_type="audio/ogg")
 

@@ -6,6 +6,7 @@ import { CircuitBreaker } from './circuit-breaker.js';
 import type { TtsStatus } from '@tts-reader/shared';
 
 const TTS_SERVICE_URL = process.env.TTS_SERVICE_URL || 'http://localhost:5000';
+const TTS_CONCURRENCY = parseInt(process.env.TTS_CONCURRENCY || '2', 10);
 const TTS_DIR = 'data/tts';
 const BASE_TIMEOUT_MS = 15_000;
 const TIMEOUT_PER_20_CHARS_MS = 1_000;
@@ -119,10 +120,11 @@ async function processBook(
 
   const bookExists = db.prepare(`SELECT 1 FROM books WHERE id = ?`);
   let failedCount = 0;
+  const inFlight = new Set<Promise<void>>();
 
   for (const sentence of sentences) {
-    if (abort.signal.aborted) return;
-    if (!bookExists.get(bookId)) return;
+    if (abort.signal.aborted) break;
+    if (!bookExists.get(bookId)) break;
 
     const hash = createHash('sha256')
       .update(sentence.text + voice + language)
@@ -136,57 +138,37 @@ async function processBook(
       continue;
     }
 
-    // Skip permanently failed sentences
     const existing = db.prepare(`SELECT status FROM sentence_audio WHERE sentence_id = ?`)
       .get(sentence.id) as { status: string } | undefined;
     if (existing?.status === 'failed') continue;
 
-    // Wait for circuit to close before attempting
     if (breaker.isOpen) {
+      await Promise.all(inFlight);
+      inFlight.clear();
       const recovered = await breaker.waitUntilClosed(abort.signal);
-      if (!recovered) return;
+      if (!recovered) break;
     }
 
-    const result = await synthesize(sentence.text, voice, language, abort.signal);
+    if (inFlight.size >= TTS_CONCURRENCY) {
+      await Promise.race(inFlight);
+    }
 
-    if (abort.signal.aborted) return;
-
-    if (result.type === 'success') {
-      const buf = Buffer.from(result.data);
-      upsertAudio.run(sentence.id, hash, 'completed', buf.length);
-      writeFileSync(filePath, buf);
-      breaker.recordSuccess();
-    } else if (result.type === 'permanent') {
-      upsertAudio.run(sentence.id, hash, 'failed', 0);
-      failedCount++;
-      console.log(`[tts] failed sentence=${sentence.id} reason=bad_input text_length=${sentence.text.length}`);
-      if (errorBehavior === 'stop') {
+    const task = processSentence(
+      sentence, hash, filePath, voice, language, abort, upsertAudio, errorBehavior,
+    ).then(result => {
+      if (result === 'failed') failedCount++;
+      if (result === 'stop') {
         db.prepare(`UPDATE books SET tts_status = 'failed' WHERE id = ?`).run(bookId);
         console.log(`[tts] stopped book="${bookTitle}" due to error_behavior=stop`);
-        return;
+        abort.abort();
       }
-    } else {
-      // transient — circuit breaker handles pause/retry
-      breaker.recordFailure();
-      if (breaker.isOpen) {
-        const recovered = await breaker.waitUntilClosed(abort.signal);
-        if (!recovered) return;
-      }
-      // Retry this sentence once more after circuit recovery
-      const retry = await synthesize(sentence.text, voice, language, abort.signal);
-      if (abort.signal.aborted) return;
-      if (retry.type === 'success') {
-        const buf = Buffer.from(retry.data);
-        upsertAudio.run(sentence.id, hash, 'completed', buf.length);
-        writeFileSync(filePath, buf);
-        breaker.recordSuccess();
-      } else {
-        upsertAudio.run(sentence.id, hash, 'failed', 0);
-        failedCount++;
-        console.log(`[tts] failed sentence=${sentence.id} reason=transient_unrecoverable text_length=${sentence.text.length}`);
-      }
-    }
+    });
+
+    inFlight.add(task);
+    task.finally(() => inFlight.delete(task));
   }
+
+  await Promise.all(inFlight);
 
   if (!abort.signal.aborted) {
     db.prepare(`UPDATE books SET tts_status = 'completed' WHERE id = ?`).run(bookId);
@@ -197,6 +179,50 @@ async function processBook(
     currentAbort = null;
     currentBookId = null;
   }
+}
+
+async function processSentence(
+  sentence: { id: string; text: string },
+  hash: string,
+  filePath: string,
+  voice: string,
+  language: string,
+  abort: AbortController,
+  upsertAudio: { run: (...args: unknown[]) => void },
+  errorBehavior: string,
+): Promise<'ok' | 'failed' | 'stop'> {
+  const result = await synthesize(sentence.text, voice, language, abort.signal);
+  if (abort.signal.aborted) return 'ok';
+
+  if (result.type === 'success') {
+    const buf = Buffer.from(result.data);
+    upsertAudio.run(sentence.id, hash, 'completed', buf.length);
+    writeFileSync(filePath, buf);
+    breaker.recordSuccess();
+    return 'ok';
+  }
+
+  if (result.type === 'permanent') {
+    upsertAudio.run(sentence.id, hash, 'failed', 0);
+    console.log(`[tts] failed sentence=${sentence.id} reason=bad_input text_length=${sentence.text.length}`);
+    return errorBehavior === 'stop' ? 'stop' : 'failed';
+  }
+
+  breaker.recordFailure();
+  const retry = await synthesize(sentence.text, voice, language, abort.signal);
+  if (abort.signal.aborted) return 'ok';
+
+  if (retry.type === 'success') {
+    const buf = Buffer.from(retry.data);
+    upsertAudio.run(sentence.id, hash, 'completed', buf.length);
+    writeFileSync(filePath, buf);
+    breaker.recordSuccess();
+    return 'ok';
+  }
+
+  upsertAudio.run(sentence.id, hash, 'failed', 0);
+  console.log(`[tts] failed sentence=${sentence.id} reason=transient_unrecoverable text_length=${sentence.text.length}`);
+  return 'failed';
 }
 
 type SynthResult =
