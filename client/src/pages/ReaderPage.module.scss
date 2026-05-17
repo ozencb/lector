@@ -13,15 +13,18 @@
   justify-content: center;
   height: 100%;
   color: var(--color-text-muted);
-  gap: 16px;
+  gap: 12px;
+  font-size: 0.875rem;
 }
 
 .backLink {
   background: none;
   border: none;
   color: var(--color-accent);
-  font-size: 0.9rem;
-  text-decoration: underline;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  text-decoration: none;
+  transition: color var(--transition);
 
   &:hover {
     color: var(--color-accent-hover);
@@ -32,34 +35,38 @@
 .header {
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 12px 16px;
+  gap: 10px;
+  padding: 10px 16px;
   border-bottom: 1px solid var(--color-border);
   flex-shrink: 0;
+  background: var(--color-bg);
 }
 
 .bookTitle {
   flex: 1;
-  font-size: 0.9rem;
-  font-weight: 600;
+  font-size: 0.8125rem;
+  font-weight: 500;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  letter-spacing: -0.01em;
 }
 
 .chapterIndicator {
-  font-size: 0.8rem;
+  font-size: 0.75rem;
   color: var(--color-text-muted);
   white-space: nowrap;
   background: none;
-  border: 1px solid var(--color-border);
-  border-radius: 4px;
-  padding: 4px 8px;
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-sm);
+  padding: 4px 10px;
   cursor: pointer;
-  transition: background 0.15s;
+  font-weight: 500;
+  transition: background var(--transition), border-color var(--transition);
 
   &:hover {
     background: var(--color-surface-hover);
+    border-color: var(--color-border-strong);
   }
 }
 
@@ -68,6 +75,7 @@
   position: fixed;
   inset: 0;
   background: var(--color-overlay);
+  animation: fadeIn 150ms ease;
 }
 
 .dialogContent {
@@ -75,41 +83,45 @@
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
-  background: var(--color-surface);
-  border-radius: 8px;
-  padding: 24px;
-  max-width: 400px;
+  background: var(--color-surface-raised);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: 20px;
+  max-width: 380px;
   width: 90vw;
   max-height: 70vh;
   display: flex;
   flex-direction: column;
+  box-shadow: 0 16px 48px var(--color-shadow);
+  animation: dialogIn 200ms cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .dialogTitle {
-  font-size: 1rem;
+  font-size: 0.875rem;
   font-weight: 600;
-  margin-bottom: 16px;
+  margin-bottom: 12px;
+  letter-spacing: -0.01em;
 }
 
 .chapterList {
   overflow-y: auto;
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 1px;
 }
 
 .chapterItem {
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 10px 12px;
+  gap: 10px;
+  padding: 8px 10px;
   border: none;
-  border-radius: 6px;
+  border-radius: var(--radius-sm);
   background: transparent;
   color: var(--color-text);
   text-align: left;
   cursor: pointer;
-  transition: background 0.15s;
+  transition: background var(--transition);
 
   &:hover {
     background: var(--color-surface-hover);
@@ -117,23 +129,24 @@
 }
 
 .chapterItemActive {
-  background: var(--color-accent);
-  color: var(--color-accent-text);
+  background: var(--color-accent-subtle);
+  color: var(--color-accent);
 
   &:hover {
-    background: var(--color-accent-hover);
+    background: var(--color-accent-subtle);
   }
 }
 
 .chapterNum {
-  font-size: 0.75rem;
-  min-width: 24px;
+  font-size: 0.6875rem;
+  min-width: 22px;
   text-align: center;
-  opacity: 0.6;
+  color: var(--color-text-muted);
+  font-variant-numeric: tabular-nums;
 }
 
 .chapterTitle {
-  font-size: 0.85rem;
+  font-size: 0.8125rem;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -148,36 +161,40 @@
 }
 
 .focusLabel {
-  font-size: 0.75rem;
+  font-size: 0.6875rem;
   color: var(--color-text-muted);
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
 }
 
 .switchRoot {
-  width: 32px;
-  height: 18px;
+  width: 28px;
+  height: 16px;
   background: var(--color-surface-hover);
-  border: none;
-  border-radius: 9px;
+  border: 1px solid var(--color-border-strong);
+  border-radius: 8px;
   position: relative;
   cursor: pointer;
-  transition: background 0.2s;
+  transition: background var(--transition), border-color var(--transition);
 
   &[data-state='checked'] {
     background: var(--color-accent);
+    border-color: var(--color-accent);
   }
 }
 
 .switchThumb {
   display: block;
-  width: 14px;
-  height: 14px;
+  width: 12px;
+  height: 12px;
   background: #fff;
   border-radius: 50%;
-  transition: transform 0.2s;
-  transform: translateX(2px);
+  transition: transform var(--transition);
+  transform: translateX(1px);
 
   &[data-state='checked'] {
-    transform: translateX(16px);
+    transform: translateX(13px);
   }
 }
 
@@ -188,20 +205,21 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 32px 24px;
-  gap: 24px;
+  padding: 40px 32px;
+  gap: 20px;
   overflow: hidden;
-  max-width: 640px;
+  max-width: 600px;
   margin: 0 auto;
   width: 100%;
 }
 
 .prevSentence,
 .nextSentence {
-  font-size: 0.95rem;
-  line-height: 1.5;
+  font-size: 0.875rem;
+  line-height: 1.6;
   text-align: center;
-  opacity: 0.3;
+  color: var(--color-text-muted);
+  opacity: 0.4;
   max-height: 3em;
   overflow: hidden;
   transition: opacity 0.3s ease, max-height 0.3s ease;
@@ -214,10 +232,11 @@
 }
 
 .currentSentence {
-  font-size: 1.5rem;
-  line-height: 1.6;
+  font-size: 1.375rem;
+  line-height: 1.7;
   text-align: center;
   font-weight: 500;
+  letter-spacing: -0.01em;
   animation: fadeSlideIn 0.3s ease;
   overflow-wrap: break-word;
   word-break: break-word;
@@ -226,7 +245,7 @@
 @keyframes fadeSlideIn {
   from {
     opacity: 0;
-    transform: translateY(8px);
+    transform: translateY(6px);
   }
   to {
     opacity: 1;
@@ -239,28 +258,30 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 16px;
+  gap: 12px;
   padding: 12px 16px;
   padding-bottom: max(12px, env(safe-area-inset-bottom));
   border-top: 1px solid var(--color-border);
   flex-shrink: 0;
+  background: var(--color-bg);
 }
 
 .iconButton {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 44px;
-  height: 44px;
+  width: 40px;
+  height: 40px;
   border: none;
-  border-radius: 50%;
+  border-radius: var(--radius-md);
   background: transparent;
-  color: var(--color-text);
-  transition: background 0.15s;
+  color: var(--color-text-muted);
+  transition: background var(--transition), color var(--transition);
   -webkit-tap-highlight-color: transparent;
 
   &:hover {
     background: var(--color-surface-hover);
+    color: var(--color-text);
   }
 }
 
@@ -268,26 +289,31 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 56px;
-  height: 56px;
+  width: 48px;
+  height: 48px;
   border: none;
   border-radius: 50%;
   background: var(--color-accent);
   color: var(--color-accent-text);
-  transition: background 0.15s;
+  transition: background var(--transition), transform var(--transition);
   -webkit-tap-highlight-color: transparent;
 
   &:hover {
     background: var(--color-accent-hover);
+    transform: scale(1.04);
+  }
+
+  &:active {
+    transform: scale(0.96);
   }
 }
 
-// Picker modal (iOS-style wheel)
+// Picker modal
 .pickerOverlay {
   position: fixed;
   inset: 0;
   background: var(--color-overlay);
-  animation: fadeIn 0.2s ease;
+  animation: fadeIn 150ms ease;
 }
 
 .pickerContent {
@@ -295,34 +321,40 @@
   bottom: 0;
   left: 0;
   right: 0;
-  background: var(--color-surface);
-  border-radius: 16px 16px 0 0;
+  background: var(--color-surface-raised);
+  border-top: 1px solid var(--color-border);
+  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
   padding: 16px;
   padding-bottom: max(16px, env(safe-area-inset-bottom));
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 12px;
-  animation: slideUp 0.25s ease;
+  animation: slideUp 250ms cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .pickerTitle {
-  font-size: 0.875rem;
+  font-size: 0.6875rem;
   font-weight: 600;
   color: var(--color-text-muted);
   text-transform: uppercase;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.06em;
 }
 
 .pickerDone {
   border: none;
   background: none;
   color: var(--color-accent);
-  font-size: 1rem;
+  font-size: 0.875rem;
   font-weight: 600;
-  padding: 8px 24px;
+  padding: 8px 20px;
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
+  transition: opacity var(--transition);
+
+  &:hover {
+    opacity: 0.8;
+  }
 }
 
 @keyframes fadeIn {
@@ -335,19 +367,32 @@
   to { transform: translateY(0); }
 }
 
+@keyframes dialogIn {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -48%);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, -50%);
+  }
+}
+
 // Speed change toast
 .speedToast {
   position: fixed;
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
-  background: var(--color-overlay-heavy);
-  color: var(--color-accent-text);
-  font-size: 1.5rem;
+  background: var(--color-surface-raised);
+  border: 1px solid var(--color-border);
+  color: var(--color-text);
+  font-size: 1.25rem;
   font-weight: 600;
-  padding: 12px 24px;
-  border-radius: 8px;
+  padding: 10px 20px;
+  border-radius: var(--radius-md);
   pointer-events: none;
+  box-shadow: 0 8px 24px var(--color-shadow);
   animation: toastFade 1s ease forwards;
 }
 

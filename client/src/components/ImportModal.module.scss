@@ -2,6 +2,7 @@
   position: fixed;
   inset: 0;
   background: var(--color-overlay);
+  animation: fadeIn 150ms ease;
 }
 
 .content {
@@ -9,20 +10,23 @@
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
-  background: var(--color-surface);
-  border-radius: 8px;
-  padding: 24px;
-  max-width: 400px;
+  background: var(--color-surface-raised);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: 20px;
+  max-width: 380px;
   width: 90vw;
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 14px;
+  box-shadow: 0 16px 48px var(--color-shadow);
+  animation: dialogIn 200ms cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .title {
-  font-size: 1rem;
+  font-size: 0.875rem;
   font-weight: 600;
-  margin-bottom: 4px;
+  letter-spacing: -0.01em;
 }
 
 .field {
@@ -32,23 +36,30 @@
   gap: 12px;
 
   label {
-    font-size: 0.85rem;
+    font-size: 0.8125rem;
     color: var(--color-text);
     white-space: nowrap;
+    font-weight: 500;
   }
 }
 
 .select {
   font: inherit;
-  font-size: 0.85rem;
-  padding: 6px 8px;
-  border: 1px solid var(--color-border);
-  border-radius: 6px;
+  font-size: 0.8125rem;
+  padding: 6px 10px;
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-sm);
   background: var(--color-surface);
   color: var(--color-text);
   min-width: 0;
   max-width: 180px;
   cursor: pointer;
+  transition: border-color var(--transition);
+
+  &:focus {
+    outline: none;
+    border-color: var(--color-accent);
+  }
 }
 
 .voiceControl {
@@ -61,14 +72,20 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 30px;
-  height: 30px;
-  border: 1px solid var(--color-border);
-  border-radius: 6px;
+  width: 28px;
+  height: 28px;
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-sm);
   background: var(--color-surface);
-  color: var(--color-text);
+  color: var(--color-text-muted);
   cursor: pointer;
   flex-shrink: 0;
+  transition: color var(--transition), border-color var(--transition);
+
+  &:hover:not(:disabled) {
+    color: var(--color-text);
+    border-color: var(--color-text-muted);
+  }
 
   &:disabled {
     opacity: 0.3;
@@ -79,28 +96,57 @@
 .actions {
   display: flex;
   justify-content: flex-end;
-  gap: 12px;
+  gap: 8px;
   margin-top: 4px;
 }
 
 .cancelButton {
   border: none;
   background: none;
-  color: var(--color-text);
-  font-size: 0.9rem;
-  padding: 8px 16px;
+  color: var(--color-text-muted);
+  font-size: 0.8125rem;
+  font-weight: 500;
+  padding: 6px 14px;
   cursor: pointer;
+  border-radius: var(--radius-sm);
+  transition: color var(--transition), background var(--transition);
   -webkit-tap-highlight-color: transparent;
+
+  &:hover {
+    color: var(--color-text);
+    background: var(--color-surface-hover);
+  }
 }
 
 .importButton {
   border: none;
   background: var(--color-accent);
   color: #fff;
-  font-size: 0.9rem;
-  font-weight: 600;
-  padding: 8px 20px;
-  border-radius: 6px;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  padding: 6px 16px;
+  border-radius: var(--radius-sm);
   cursor: pointer;
+  transition: background var(--transition);
   -webkit-tap-highlight-color: transparent;
+
+  &:hover {
+    background: var(--color-accent-hover);
+  }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes dialogIn {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -48%);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, -50%);
+  }
 }
