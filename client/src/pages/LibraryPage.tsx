@@ -1,13 +1,19 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
-import { DashboardIcon, GearIcon, GitHubLogoIcon, ListBulletIcon, PlusIcon } from '@radix-ui/react-icons';
-import type { Book } from '@tts-reader/shared';
-import { deleteBook, listBooks, uploadBook } from '../services/api.js';
-import BookCard from '../components/BookCard.js';
-import BookTable from '../components/BookTable.js';
-import ThemeToggle from '../components/ThemeToggle.js';
-import ImportModal from '../components/ImportModal.js';
-import SettingsPanel from '../components/SettingsPanel.js';
-import styles from './LibraryPage.module.scss';
+import { useCallback, useEffect, useRef, useState } from "react";
+import {
+  DashboardIcon,
+  GearIcon,
+  GitHubLogoIcon,
+  ListBulletIcon,
+  PlusIcon,
+} from "@radix-ui/react-icons";
+import type { Book } from "@tts-reader/shared";
+import { deleteBook, listBooks, uploadBook } from "../services/api.js";
+import BookCard from "../components/BookCard.js";
+import BookTable from "../components/BookTable.js";
+import ThemeToggle from "../components/ThemeToggle.js";
+import ImportModal from "../components/ImportModal.js";
+import SettingsPanel from "../components/SettingsPanel.js";
+import styles from "./LibraryPage.module.scss";
 
 export default function LibraryPage() {
   const [books, setBooks] = useState<Book[]>([]);
@@ -17,15 +23,15 @@ export default function LibraryPage() {
   const [importModalOpen, setImportModalOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [pendingFile, setPendingFile] = useState<File | null>(null);
-  const [viewMode, setViewMode] = useState<'grid' | 'table'>(() =>
-    (localStorage.getItem('library-view') as 'grid' | 'table') || 'grid'
+  const [viewMode, setViewMode] = useState<"grid" | "table">(
+    () => (localStorage.getItem("library-view") as "grid" | "table") || "grid",
   );
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const toggleView = () => {
-    const next = viewMode === 'grid' ? 'table' : 'grid';
+    const next = viewMode === "grid" ? "table" : "grid";
     setViewMode(next);
-    localStorage.setItem('library-view', next);
+    localStorage.setItem("library-view", next);
   };
 
   const fetchBooks = useCallback(() => {
@@ -40,7 +46,7 @@ export default function LibraryPage() {
       await deleteBook(id);
       setBooks((prev) => prev.filter((b) => b.id !== id));
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Delete failed');
+      setError(err instanceof Error ? err.message : "Delete failed");
     }
   };
 
@@ -52,20 +58,24 @@ export default function LibraryPage() {
     const file = e.target.files?.[0];
     if (!file) return;
     // Reset input so same file can be re-selected
-    e.target.value = '';
+    e.target.value = "";
 
-    const skipDialog = localStorage.getItem('tts-skip-import-dialog') === 'true';
+    const skipDialog =
+      localStorage.getItem("tts-skip-import-dialog") === "true";
     if (skipDialog) {
-      const defaultVoice = localStorage.getItem('tts-default-voice') || undefined;
-      const defaultLanguage = localStorage.getItem('tts-default-language') || undefined;
-      const errorBehavior = localStorage.getItem('tts-error-behavior') || 'skip';
+      const defaultVoice =
+        localStorage.getItem("tts-default-voice") || undefined;
+      const defaultLanguage =
+        localStorage.getItem("tts-default-language") || undefined;
+      const errorBehavior =
+        localStorage.getItem("tts-error-behavior") || "skip";
       setUploading(true);
       setError(null);
       try {
         await uploadBook(file, defaultVoice, defaultLanguage, errorBehavior);
         fetchBooks();
       } catch (err) {
-        setError(err instanceof Error ? err.message : 'Upload failed');
+        setError(err instanceof Error ? err.message : "Upload failed");
       } finally {
         setUploading(false);
       }
@@ -81,11 +91,12 @@ export default function LibraryPage() {
     setUploading(true);
     setError(null);
     try {
-      const errorBehavior = localStorage.getItem('tts-error-behavior') || 'skip';
+      const errorBehavior =
+        localStorage.getItem("tts-error-behavior") || "skip";
       await uploadBook(pendingFile, voice, language, errorBehavior);
       fetchBooks();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Upload failed');
+      setError(err instanceof Error ? err.message : "Upload failed");
     } finally {
       setUploading(false);
       setPendingFile(null);
@@ -95,15 +106,33 @@ export default function LibraryPage() {
   return (
     <div className={styles.page}>
       <div className={styles.header}>
-        <h1 className={styles.heading}>Library</h1>
-        <button className={styles.viewToggle} onClick={toggleView} aria-label="Toggle view">
-          {viewMode === 'grid' ? <ListBulletIcon width={18} height={18} /> : <DashboardIcon width={18} height={18} />}
+        <h1 className={styles.heading}>Lector</h1>
+        <button
+          className={styles.viewToggle}
+          onClick={toggleView}
+          aria-label="Toggle view"
+        >
+          {viewMode === "grid" ? (
+            <ListBulletIcon width={18} height={18} />
+          ) : (
+            <DashboardIcon width={18} height={18} />
+          )}
         </button>
         <ThemeToggle />
-        <button className={styles.settingsButton} onClick={() => setSettingsOpen(true)} aria-label="Settings">
+        <button
+          className={styles.settingsButton}
+          onClick={() => setSettingsOpen(true)}
+          aria-label="Settings"
+        >
           <GearIcon width={18} height={18} />
         </button>
-        <a className={styles.githubLink} href="https://github.com/ozencb/lector" target="_blank" rel="noopener noreferrer" aria-label="GitHub">
+        <a
+          className={styles.githubLink}
+          href="https://github.com/ozencb/lector"
+          target="_blank"
+          rel="noopener noreferrer"
+          aria-label="GitHub"
+        >
           <GitHubLogoIcon width={18} height={18} />
         </a>
         <input
@@ -123,7 +152,7 @@ export default function LibraryPage() {
           ) : (
             <PlusIcon width={18} height={18} />
           )}
-          {uploading ? 'Uploading…' : 'Add'}
+          {uploading ? "Uploading…" : "Add"}
         </button>
       </div>
 
@@ -137,18 +166,33 @@ export default function LibraryPage() {
         </div>
       )}
 
-      {!loading && !error && books.length > 0 && viewMode === 'grid' && (
+      {!loading && !error && books.length > 0 && viewMode === "grid" && (
         <div className={styles.grid}>
           {books.map((book) => (
-            <BookCard key={book.id} book={book} onDelete={handleDelete} onRetry={fetchBooks} onPrioritize={fetchBooks} />
+            <BookCard
+              key={book.id}
+              book={book}
+              onDelete={handleDelete}
+              onRetry={fetchBooks}
+              onPrioritize={fetchBooks}
+            />
           ))}
         </div>
       )}
 
-      {!loading && !error && books.length > 0 && viewMode === 'table' && (
-        <BookTable books={books} onDelete={handleDelete} onRetry={fetchBooks} onPrioritize={fetchBooks} />
+      {!loading && !error && books.length > 0 && viewMode === "table" && (
+        <BookTable
+          books={books}
+          onDelete={handleDelete}
+          onRetry={fetchBooks}
+          onPrioritize={fetchBooks}
+        />
       )}
-      <ImportModal open={importModalOpen} onOpenChange={setImportModalOpen} onConfirm={handleImportConfirm} />
+      <ImportModal
+        open={importModalOpen}
+        onOpenChange={setImportModalOpen}
+        onConfirm={handleImportConfirm}
+      />
       <SettingsPanel open={settingsOpen} onOpenChange={setSettingsOpen} />
     </div>
   );
