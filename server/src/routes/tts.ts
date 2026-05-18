@@ -176,7 +176,7 @@ export async function ttsRoutes(server: FastifyInstance) {
         await execFileAsync('ffmpeg', [
           '-f', 'concat', '-safe', '0',
           '-i', listPath,
-          '-c', 'copy',
+          '-c:a', 'libopus', '-b:a', '96k',
           outPath,
         ]);
       } catch {
