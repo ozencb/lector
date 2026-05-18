@@ -41,16 +41,6 @@ export default function BookCard({ book, onDelete, onRetry, onPrioritize }: Book
   const [downloadDialogOpen, setDownloadDialogOpen] = useState(false);
   const [downloading, setDownloading] = useState(false);
   const [speed, setSpeed] = useState(1);
-  const [downloadText, setDownloadText] = useState('Downloading…');
-
-  useEffect(() => {
-    if (!downloading) return;
-    setDownloadText('Downloading…');
-    const id = setInterval(() => {
-      setDownloadText((t) => t === 'Downloading…' ? 'Processing Audio…' : 'Downloading…');
-    }, 3000);
-    return () => clearInterval(id);
-  }, [downloading]);
 
   const handleDownload = async () => {
     setDownloading(true);
@@ -200,7 +190,7 @@ export default function BookCard({ book, onDelete, onRetry, onPrioritize }: Book
                     if (!downloading) setDownloadDialogOpen(true);
                   }}
                 >
-                  {downloading ? downloadText : 'Download Audio'}
+                  {downloading ? 'Processing Audio…' : 'Download Audio'}
                 </ContextMenu.Item>
               </>
             )}
@@ -338,7 +328,7 @@ export default function BookCard({ book, onDelete, onRetry, onPrioritize }: Book
                 onClick={handleDownload}
               >
                 {downloading && <span className={styles.spinner} />}
-                {downloading ? downloadText : 'Download'}
+                {downloading ? 'Processing Audio…' : 'Download'}
               </button>
             </div>
           </Dialog.Content>

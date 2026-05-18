@@ -76,16 +76,6 @@ function DownloadCell({ book }: { book: Book }) {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [downloading, setDownloading] = useState(false);
   const [speed, setSpeed] = useState(1);
-  const [downloadText, setDownloadText] = useState('Downloading…');
-
-  useEffect(() => {
-    if (!downloading) return;
-    setDownloadText('Downloading…');
-    const id = setInterval(() => {
-      setDownloadText((t) => t === 'Downloading…' ? 'Processing Audio…' : 'Downloading…');
-    }, 3000);
-    return () => clearInterval(id);
-  }, [downloading]);
 
   if (book.ttsStatus === 'pending') return null;
 
@@ -122,7 +112,7 @@ function DownloadCell({ book }: { book: Book }) {
         }}
       >
         {downloading && <span className={styles.spinner} />}
-        {downloading ? downloadText : 'Download'}
+        {downloading ? 'Processing Audio…' : 'Download'}
       </button>
       <Dialog.Root open={dialogOpen} onOpenChange={(open) => { if (!downloading) setDialogOpen(open); }}>
         <Dialog.Portal>
@@ -161,7 +151,7 @@ function DownloadCell({ book }: { book: Book }) {
                 onClick={handleDownload}
               >
                 {downloading && <span className={styles.spinner} />}
-                {downloading ? downloadText : 'Download'}
+                {downloading ? 'Processing Audio…' : 'Download'}
               </button>
             </div>
           </Dialog.Content>
