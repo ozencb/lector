@@ -5,6 +5,7 @@ import * as Dialog from '@radix-ui/react-dialog';
 import type { Book } from '@tts-reader/shared';
 import { useNavigate } from 'react-router-dom';
 import { getTtsStatus, regenerateBookAudio, prioritizeBookAudio, getDownloadAudioUrl } from '../services/api.js';
+import useIsMobile from '../hooks/useIsMobile.js';
 import styles from './BookCard.module.scss';
 
 function formatSize(bytes: number): string {
@@ -32,6 +33,7 @@ interface BookCardProps {
 
 export default function BookCard({ book, onDelete, onRetry, onPrioritize }: BookCardProps) {
   const navigate = useNavigate();
+  const isMobile = useIsMobile();
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [infoOpen, setInfoOpen] = useState(false);
   const [downloadConfirmOpen, setDownloadConfirmOpen] = useState(false);
@@ -121,12 +123,38 @@ export default function BookCard({ book, onDelete, onRetry, onPrioritize }: Book
     <>
       <ContextMenu.Root>
         <ContextMenu.Trigger asChild>
-          <div className={styles.card} onClick={() => navigate(`/read/${book.id}`)}>
+          <div
+            className={styles.card}
+            onClick={(e) => {
+              if (isMobile) {
+                e.currentTarget.dispatchEvent(
+                  new MouseEvent('contextmenu', {
+                    bubbles: true,
+                    clientX: e.clientX,
+                    clientY: e.clientY,
+                  }),
+                );
+              } else {
+                navigate(`/read/${book.id}`);
+              }
+            }}
+          >
             {cardContent}
           </div>
         </ContextMenu.Trigger>
         <ContextMenu.Portal>
           <ContextMenu.Content className={styles.contextMenu}>
+            {isMobile && (
+              <>
+                <ContextMenu.Item
+                  className={styles.contextMenuItemDefault}
+                  onSelect={() => navigate(`/read/${book.id}`)}
+                >
+                  Read
+                </ContextMenu.Item>
+                <ContextMenu.Separator className={styles.contextMenuSeparator} />
+              </>
+            )}
             <ContextMenu.Item
               className={styles.contextMenuItemDefault}
               onSelect={() => setInfoOpen(true)}

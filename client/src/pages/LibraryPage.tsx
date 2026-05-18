@@ -13,6 +13,7 @@ import BookTable from "../components/BookTable.js";
 import ThemeToggle from "../components/ThemeToggle.js";
 import ImportModal from "../components/ImportModal.js";
 import SettingsPanel from "../components/SettingsPanel.js";
+import useIsMobile from "../hooks/useIsMobile.js";
 import styles from "./LibraryPage.module.scss";
 
 export default function LibraryPage() {
@@ -26,7 +27,10 @@ export default function LibraryPage() {
   const [viewMode, setViewMode] = useState<"grid" | "table">(
     () => (localStorage.getItem("library-view") as "grid" | "table") || "grid",
   );
+  const isMobile = useIsMobile();
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const effectiveView = isMobile ? "grid" : viewMode;
 
   const toggleView = () => {
     const next = viewMode === "grid" ? "table" : "grid";
@@ -107,17 +111,19 @@ export default function LibraryPage() {
     <div className={styles.page}>
       <div className={styles.header}>
         <h1 className={styles.heading}>Lector</h1>
-        <button
-          className={styles.viewToggle}
-          onClick={toggleView}
-          aria-label="Toggle view"
-        >
-          {viewMode === "grid" ? (
-            <ListBulletIcon width={18} height={18} />
-          ) : (
-            <DashboardIcon width={18} height={18} />
-          )}
-        </button>
+        {!isMobile && (
+          <button
+            className={styles.viewToggle}
+            onClick={toggleView}
+            aria-label="Toggle view"
+          >
+            {effectiveView === "grid" ? (
+              <ListBulletIcon width={18} height={18} />
+            ) : (
+              <DashboardIcon width={18} height={18} />
+            )}
+          </button>
+        )}
         <ThemeToggle />
         <button
           className={styles.settingsButton}
@@ -166,7 +172,7 @@ export default function LibraryPage() {
         </div>
       )}
 
-      {!loading && !error && books.length > 0 && viewMode === "grid" && (
+      {!loading && !error && books.length > 0 && effectiveView === "grid" && (
         <div className={styles.grid}>
           {books.map((book) => (
             <BookCard
@@ -180,7 +186,7 @@ export default function LibraryPage() {
         </div>
       )}
 
-      {!loading && !error && books.length > 0 && viewMode === "table" && (
+      {!loading && !error && books.length > 0 && effectiveView === "table" && (
         <BookTable
           books={books}
           onDelete={handleDelete}
