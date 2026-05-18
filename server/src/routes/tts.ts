@@ -2,7 +2,6 @@ import { FastifyInstance } from 'fastify';
 import { readFileSync, existsSync, writeFileSync, mkdirSync, unlinkSync, createReadStream } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { execFile } from 'node:child_process';
-import { promisify } from 'node:util';
 import { randomUUID } from 'node:crypto';
 import { getDb } from '../db.js';
 import { enqueueBookGeneration, getBookTtsStatus, prioritizeBook } from '../services/tts-generator.js';
@@ -181,12 +180,15 @@ export async function ttsRoutes(server: FastifyInstance) {
         outPath,
       ];
 
-      const execFileAsync = promisify(execFile);
       try {
-        await execFileAsync('ffmpeg', ffmpegArgs);
+        await new Promise<void>((resolve, reject) => {
+          const proc = execFile('ffmpeg', ffmpegArgs, (err) => err ? reject(err) : resolve());
+          request.raw.on('close', () => { proc.kill(); });
+        });
       } catch {
         unlinkSync(listPath);
         try { unlinkSync(outPath); } catch {}
+        if (request.raw.destroyed) return;
         return reply.status(500).send({ error: 'Failed to merge audio' });
       }
 
