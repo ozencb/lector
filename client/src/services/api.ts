@@ -89,8 +89,9 @@ export function getTtsDemoUrl(voiceId: string): string {
   return `${BASE_URL}/api/tts/demo/${voiceId}`;
 }
 
-export function getDownloadAudioUrl(bookId: string): string {
-  return `${BASE_URL}/api/books/${bookId}/download-audio`;
+export function getDownloadAudioUrl(bookId: string, speed?: number): string {
+  const base = `${BASE_URL}/api/books/${bookId}/download-audio`;
+  return speed && speed !== 1 ? `${base}?speed=${speed}` : base;
 }
 
 export function prioritizeBookAudio(bookId: string): Promise<{ status: string }> {

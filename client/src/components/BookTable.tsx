@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import type { Book } from '@tts-reader/shared';
 import { getTtsStatus, regenerateBookAudio, prioritizeBookAudio, getDownloadAudioUrl } from '../services/api.js';
 import * as AlertDialog from '@radix-ui/react-alert-dialog';
+import * as Dialog from '@radix-ui/react-dialog';
 import styles from './BookTable.module.scss';
 
 interface BookTableProps {
@@ -69,24 +70,40 @@ function TtsCell({ book, onRetry }: { book: Book; onRetry?: (id: string) => void
   }
 }
 
+const SPEED_OPTIONS = [0.5, 0.75, 1, 1.25, 1.5, 1.75, 2];
+
 function DownloadCell({ book }: { book: Book }) {
-  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [dialogOpen, setDialogOpen] = useState(false);
   const [downloading, setDownloading] = useState(false);
+  const [speed, setSpeed] = useState(1);
+  const [downloadText, setDownloadText] = useState('Downloading…');
+
+  useEffect(() => {
+    if (!downloading) return;
+    setDownloadText('Downloading…');
+    const id = setInterval(() => {
+      setDownloadText((t) => t === 'Downloading…' ? 'Processing Audio…' : 'Downloading…');
+    }, 3000);
+    return () => clearInterval(id);
+  }, [downloading]);
 
   if (book.ttsStatus === 'pending') return null;
 
   const handleDownload = async () => {
     setDownloading(true);
     try {
-      const res = await fetch(getDownloadAudioUrl(book.id));
+      const res = await fetch(getDownloadAudioUrl(book.id, speed));
       if (!res.ok) throw new Error();
       const blob = await res.blob();
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = '';
+      const disposition = res.headers.get('Content-Disposition') || '';
+      const match = disposition.match(/filename="([^"]+)"/);
+      a.download = match?.[1] || '';
       a.click();
       URL.revokeObjectURL(url);
+      setDialogOpen(false);
     } catch {
       // download failed silently
     } finally {
@@ -101,48 +118,55 @@ function DownloadCell({ book }: { book: Book }) {
         disabled={downloading}
         onClick={(e) => {
           e.stopPropagation();
-          if (downloading) return;
-          if (book.ttsStatus === 'completed') {
-            handleDownload();
-          } else {
-            setConfirmOpen(true);
-          }
+          if (!downloading) setDialogOpen(true);
         }}
       >
         {downloading && <span className={styles.spinner} />}
-        {downloading ? 'Downloading…' : 'Download'}
+        {downloading ? downloadText : 'Download'}
       </button>
-      <AlertDialog.Root open={confirmOpen} onOpenChange={setConfirmOpen}>
-        <AlertDialog.Portal>
-          <AlertDialog.Overlay className={styles.dialogOverlay} />
-          <AlertDialog.Content className={styles.dialogContent} onClick={(e) => e.stopPropagation()}>
-            <AlertDialog.Title className={styles.dialogTitle}>
-              Download incomplete audio?
-            </AlertDialog.Title>
-            <AlertDialog.Description className={styles.dialogDescription}>
-              Audio generation is still in progress. The download will only include what's been generated so far.
-            </AlertDialog.Description>
-            <div className={styles.dialogActions}>
-              <AlertDialog.Cancel asChild>
-                <button className={styles.dialogCancel} disabled={downloading}>Cancel</button>
-              </AlertDialog.Cancel>
-              <AlertDialog.Action asChild>
+      <Dialog.Root open={dialogOpen} onOpenChange={(open) => { if (!downloading) setDialogOpen(open); }}>
+        <Dialog.Portal>
+          <Dialog.Overlay className={styles.dialogOverlay} />
+          <Dialog.Content className={styles.dialogContent} onClick={(e) => e.stopPropagation()}>
+            <Dialog.Title className={styles.dialogTitle}>
+              Download Audio
+            </Dialog.Title>
+            {book.ttsStatus !== 'completed' && (
+              <p className={styles.dialogWarning}>
+                Audio generation is still in progress. Only what's been generated so far will be included.
+              </p>
+            )}
+            <div className={styles.speedLabel}>Speed</div>
+            <div className={styles.speedGrid}>
+              {SPEED_OPTIONS.map((s) => (
                 <button
-                  className={styles.dialogConfirm}
-                  disabled={downloading}
-                  onClick={(e) => {
-                    e.preventDefault();
-                    handleDownload().then(() => setConfirmOpen(false));
-                  }}
+                  key={s}
+                  className={`${styles.speedBtn} ${s === speed ? styles.speedBtnActive : ''}`}
+                  onClick={() => setSpeed(s)}
                 >
-                  {downloading && <span className={styles.spinner} />}
-                  {downloading ? 'Downloading…' : 'Download'}
+                  {s}x
                 </button>
-              </AlertDialog.Action>
+              ))}
             </div>
-          </AlertDialog.Content>
-        </AlertDialog.Portal>
-      </AlertDialog.Root>
+            <p className={styles.dialogInfo}>
+              This may take a moment — all audio files are merged into one.
+            </p>
+            <div className={styles.dialogActions}>
+              <Dialog.Close asChild>
+                <button className={styles.dialogCancel} disabled={downloading}>Cancel</button>
+              </Dialog.Close>
+              <button
+                className={styles.dialogConfirm}
+                disabled={downloading}
+                onClick={handleDownload}
+              >
+                {downloading && <span className={styles.spinner} />}
+                {downloading ? downloadText : 'Download'}
+              </button>
+            </div>
+          </Dialog.Content>
+        </Dialog.Portal>
+      </Dialog.Root>
     </>
   );
 }

@@ -137,7 +137,7 @@ export async function ttsRoutes(server: FastifyInstance) {
   );
 
   // GET /api/books/:id/download-audio
-  server.get<{ Params: { id: string } }>(
+  server.get<{ Params: { id: string }; Querystring: { speed?: string } }>(
     '/api/books/:id/download-audio',
     async (request, reply) => {
       const db = getDb();
@@ -147,6 +147,8 @@ export async function ttsRoutes(server: FastifyInstance) {
       if (!book) {
         return reply.status(404).send({ error: 'Book not found' });
       }
+
+      const speed = Math.min(2, Math.max(0.5, parseFloat(request.query.speed || '1') || 1));
 
       const rows = db.prepare(`
         SELECT sa.hash
@@ -171,14 +173,17 @@ export async function ttsRoutes(server: FastifyInstance) {
         .join('\n');
       writeFileSync(listPath, listContent);
 
+      const ffmpegArgs = [
+        '-f', 'concat', '-safe', '0',
+        '-i', listPath,
+        ...(speed !== 1 ? ['-filter:a', `atempo=${speed}`] : []),
+        '-c:a', 'libopus', '-b:a', '96k',
+        outPath,
+      ];
+
       const execFileAsync = promisify(execFile);
       try {
-        await execFileAsync('ffmpeg', [
-          '-f', 'concat', '-safe', '0',
-          '-i', listPath,
-          '-c:a', 'libopus', '-b:a', '96k',
-          outPath,
-        ]);
+        await execFileAsync('ffmpeg', ffmpegArgs);
       } catch {
         unlinkSync(listPath);
         try { unlinkSync(outPath); } catch {}
@@ -187,13 +192,22 @@ export async function ttsRoutes(server: FastifyInstance) {
 
       unlinkSync(listPath);
 
-      const safeTitle = book.title.replace(/[^a-zA-Z0-9 _-]/g, '').trim() || 'audiobook';
+      const WINDOWS_RESERVED = /^(CON|PRN|AUX|NUL|COM[1-9]|LPT[1-9])$/i;
+      const safeTitle = book.title
+        .replace(/[\/\\:*?"<>|]/g, '')
+        .replace(/\s+/g, '_')
+        .replace(/^\.+|\.+$/g, '')
+        .replace(/_+/g, '_')
+        .slice(0, 200)
+        .replace(/^\.+|\.+$/g, '');
+      const filename = (!safeTitle || WINDOWS_RESERVED.test(safeTitle) ? 'audiobook' : safeTitle) + '.ogg';
+
       const stream = createReadStream(outPath);
       stream.on('end', () => { try { unlinkSync(outPath); } catch {} });
 
       return reply
         .header('Content-Type', 'audio/ogg')
-        .header('Content-Disposition', `attachment; filename="${safeTitle}.ogg"`)
+        .header('Content-Disposition', `attachment; filename="${filename}"; filename*=UTF-8''${encodeURIComponent(filename)}`)
         .send(stream);
     },
   );

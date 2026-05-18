@@ -31,26 +31,42 @@ interface BookCardProps {
   onPrioritize?: (id: string) => void;
 }
 
+const SPEED_OPTIONS = [0.5, 0.75, 1, 1.25, 1.5, 1.75, 2];
+
 export default function BookCard({ book, onDelete, onRetry, onPrioritize }: BookCardProps) {
   const navigate = useNavigate();
   const isMobile = useIsMobile();
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [infoOpen, setInfoOpen] = useState(false);
-  const [downloadConfirmOpen, setDownloadConfirmOpen] = useState(false);
+  const [downloadDialogOpen, setDownloadDialogOpen] = useState(false);
   const [downloading, setDownloading] = useState(false);
+  const [speed, setSpeed] = useState(1);
+  const [downloadText, setDownloadText] = useState('Downloading…');
+
+  useEffect(() => {
+    if (!downloading) return;
+    setDownloadText('Downloading…');
+    const id = setInterval(() => {
+      setDownloadText((t) => t === 'Downloading…' ? 'Processing Audio…' : 'Downloading…');
+    }, 3000);
+    return () => clearInterval(id);
+  }, [downloading]);
 
   const handleDownload = async () => {
     setDownloading(true);
     try {
-      const res = await fetch(getDownloadAudioUrl(book.id));
+      const res = await fetch(getDownloadAudioUrl(book.id, speed));
       if (!res.ok) throw new Error();
       const blob = await res.blob();
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = '';
+      const disposition = res.headers.get('Content-Disposition') || '';
+      const match = disposition.match(/filename="([^"]+)"/);
+      a.download = match?.[1] || '';
       a.click();
       URL.revokeObjectURL(url);
+      setDownloadDialogOpen(false);
     } catch {
       // download failed silently
     } finally {
@@ -181,15 +197,10 @@ export default function BookCard({ book, onDelete, onRetry, onPrioritize }: Book
                   className={styles.contextMenuItemDefault}
                   disabled={downloading}
                   onSelect={() => {
-                    if (downloading) return;
-                    if (ttsStatus === 'completed') {
-                      handleDownload();
-                    } else {
-                      setDownloadConfirmOpen(true);
-                    }
+                    if (!downloading) setDownloadDialogOpen(true);
                   }}
                 >
-                  {downloading ? 'Downloading…' : 'Download Audio'}
+                  {downloading ? downloadText : 'Download Audio'}
                 </ContextMenu.Item>
               </>
             )}
@@ -290,37 +301,49 @@ export default function BookCard({ book, onDelete, onRetry, onPrioritize }: Book
         </Dialog.Portal>
       </Dialog.Root>
 
-      <AlertDialog.Root open={downloadConfirmOpen} onOpenChange={setDownloadConfirmOpen}>
-        <AlertDialog.Portal>
-          <AlertDialog.Overlay className={styles.dialogOverlay} />
-          <AlertDialog.Content className={styles.dialogContent}>
-            <AlertDialog.Title className={styles.dialogTitle}>
-              Download incomplete audio?
-            </AlertDialog.Title>
-            <AlertDialog.Description className={styles.dialogDescription}>
-              Audio generation is still in progress. The download will only include what's been generated so far.
-            </AlertDialog.Description>
-            <div className={styles.dialogActions}>
-              <AlertDialog.Cancel asChild>
-                <button className={styles.dialogCancel} disabled={downloading}>Cancel</button>
-              </AlertDialog.Cancel>
-              <AlertDialog.Action asChild>
+      <Dialog.Root open={downloadDialogOpen} onOpenChange={(open) => { if (!downloading) setDownloadDialogOpen(open); }}>
+        <Dialog.Portal>
+          <Dialog.Overlay className={styles.dialogOverlay} />
+          <Dialog.Content className={styles.dialogContent}>
+            <Dialog.Title className={styles.dialogTitle}>
+              Download Audio
+            </Dialog.Title>
+            {ttsStatus !== 'completed' && (
+              <p className={styles.dialogWarning}>
+                Audio generation is still in progress. Only what's been generated so far will be included.
+              </p>
+            )}
+            <div className={styles.speedLabel}>Speed</div>
+            <div className={styles.speedGrid}>
+              {SPEED_OPTIONS.map((s) => (
                 <button
-                  className={styles.dialogConfirm}
-                  disabled={downloading}
-                  onClick={(e) => {
-                    e.preventDefault();
-                    handleDownload().then(() => setDownloadConfirmOpen(false));
-                  }}
+                  key={s}
+                  className={`${styles.speedBtn} ${s === speed ? styles.speedBtnActive : ''}`}
+                  onClick={() => setSpeed(s)}
                 >
-                  {downloading && <span className={styles.spinner} />}
-                  {downloading ? 'Downloading…' : 'Download'}
+                  {s}x
                 </button>
-              </AlertDialog.Action>
+              ))}
             </div>
-          </AlertDialog.Content>
-        </AlertDialog.Portal>
-      </AlertDialog.Root>
+            <p className={styles.dialogInfo}>
+              This may take a moment — all audio files are merged into one.
+            </p>
+            <div className={styles.dialogActions}>
+              <Dialog.Close asChild>
+                <button className={styles.dialogCancel} disabled={downloading}>Cancel</button>
+              </Dialog.Close>
+              <button
+                className={styles.dialogConfirm}
+                disabled={downloading}
+                onClick={handleDownload}
+              >
+                {downloading && <span className={styles.spinner} />}
+                {downloading ? downloadText : 'Download'}
+              </button>
+            </div>
+          </Dialog.Content>
+        </Dialog.Portal>
+      </Dialog.Root>
     </>
   );
 }
