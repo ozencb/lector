@@ -89,6 +89,10 @@ export function getTtsDemoUrl(voiceId: string): string {
   return `${BASE_URL}/api/tts/demo/${voiceId}`;
 }
 
+export function getDownloadAudioUrl(bookId: string): string {
+  return `${BASE_URL}/api/books/${bookId}/download-audio`;
+}
+
 export function prioritizeBookAudio(bookId: string): Promise<{ status: string }> {
   return request<{ status: string }>(`/api/books/${bookId}/prioritize`, {
     method: "POST",

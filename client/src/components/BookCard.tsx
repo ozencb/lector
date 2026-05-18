@@ -4,7 +4,7 @@ import * as AlertDialog from '@radix-ui/react-alert-dialog';
 import * as Dialog from '@radix-ui/react-dialog';
 import type { Book } from '@tts-reader/shared';
 import { useNavigate } from 'react-router-dom';
-import { getTtsStatus, regenerateBookAudio, prioritizeBookAudio } from '../services/api.js';
+import { getTtsStatus, regenerateBookAudio, prioritizeBookAudio, getDownloadAudioUrl } from '../services/api.js';
 import styles from './BookCard.module.scss';
 
 function formatSize(bytes: number): string {
@@ -34,6 +34,14 @@ export default function BookCard({ book, onDelete, onRetry, onPrioritize }: Book
   const navigate = useNavigate();
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [infoOpen, setInfoOpen] = useState(false);
+  const [downloadConfirmOpen, setDownloadConfirmOpen] = useState(false);
+
+  const handleDownload = () => {
+    const a = document.createElement('a');
+    a.href = getDownloadAudioUrl(book.id);
+    a.download = '';
+    a.click();
+  };
   const [ttsCompleted, setTtsCompleted] = useState(0);
   const [ttsTotal, setTtsTotal] = useState(0);
   const ttsStatus = book.ttsStatus;
@@ -125,6 +133,23 @@ export default function BookCard({ book, onDelete, onRetry, onPrioritize }: Book
             >
               Info
             </ContextMenu.Item>
+            {ttsStatus !== 'pending' && (
+              <>
+                <ContextMenu.Separator className={styles.contextMenuSeparator} />
+                <ContextMenu.Item
+                  className={styles.contextMenuItemDefault}
+                  onSelect={() => {
+                    if (ttsStatus === 'completed') {
+                      handleDownload();
+                    } else {
+                      setDownloadConfirmOpen(true);
+                    }
+                  }}
+                >
+                  Download Audio
+                </ContextMenu.Item>
+              </>
+            )}
             {ttsStatus === 'pending' && (
               <>
                 <ContextMenu.Separator className={styles.contextMenuSeparator} />
@@ -221,6 +246,33 @@ export default function BookCard({ book, onDelete, onRetry, onPrioritize }: Book
           </Dialog.Content>
         </Dialog.Portal>
       </Dialog.Root>
+
+      <AlertDialog.Root open={downloadConfirmOpen} onOpenChange={setDownloadConfirmOpen}>
+        <AlertDialog.Portal>
+          <AlertDialog.Overlay className={styles.dialogOverlay} />
+          <AlertDialog.Content className={styles.dialogContent}>
+            <AlertDialog.Title className={styles.dialogTitle}>
+              Download incomplete audio?
+            </AlertDialog.Title>
+            <AlertDialog.Description className={styles.dialogDescription}>
+              Audio generation is still in progress. The download will only include what's been generated so far.
+            </AlertDialog.Description>
+            <div className={styles.dialogActions}>
+              <AlertDialog.Cancel asChild>
+                <button className={styles.dialogCancel}>Cancel</button>
+              </AlertDialog.Cancel>
+              <AlertDialog.Action asChild>
+                <button
+                  className={styles.dialogConfirm}
+                  onClick={handleDownload}
+                >
+                  Download
+                </button>
+              </AlertDialog.Action>
+            </div>
+          </AlertDialog.Content>
+        </AlertDialog.Portal>
+      </AlertDialog.Root>
     </>
   );
 }

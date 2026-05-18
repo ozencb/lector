@@ -1,6 +1,9 @@
 import { FastifyInstance } from 'fastify';
-import { readFileSync, existsSync, writeFileSync, mkdirSync } from 'node:fs';
-import { join } from 'node:path';
+import { readFileSync, existsSync, writeFileSync, mkdirSync, unlinkSync, createReadStream } from 'node:fs';
+import { join, resolve } from 'node:path';
+import { execFile } from 'node:child_process';
+import { promisify } from 'node:util';
+import { randomUUID } from 'node:crypto';
 import { getDb } from '../db.js';
 import { enqueueBookGeneration, getBookTtsStatus, prioritizeBook } from '../services/tts-generator.js';
 
@@ -130,6 +133,68 @@ export async function ttsRoutes(server: FastifyInstance) {
       enqueueBookGeneration(book.id, book.tts_voice, book.tts_language, errorBehavior);
 
       return reply.send({ status: 'queued' });
+    },
+  );
+
+  // GET /api/books/:id/download-audio
+  server.get<{ Params: { id: string } }>(
+    '/api/books/:id/download-audio',
+    async (request, reply) => {
+      const db = getDb();
+      const book = db.prepare('SELECT id, title FROM books WHERE id = ?')
+        .get(request.params.id) as { id: string; title: string } | undefined;
+
+      if (!book) {
+        return reply.status(404).send({ error: 'Book not found' });
+      }
+
+      const rows = db.prepare(`
+        SELECT sa.hash
+        FROM sentence_audio sa
+        JOIN sentences s ON sa.sentence_id = s.id
+        JOIN chapters c ON s.chapter_id = c.id
+        WHERE c.book_id = ? AND sa.status = 'completed'
+        ORDER BY c.idx, s.idx
+      `).all(book.id) as Array<{ hash: string }>;
+
+      if (rows.length === 0) {
+        return reply.status(404).send({ error: 'No audio available' });
+      }
+
+      const ttsDir = resolve('data', 'tts');
+      const tmpId = randomUUID();
+      const listPath = join(ttsDir, `concat-${tmpId}.txt`);
+      const outPath = join(ttsDir, `merged-${tmpId}.ogg`);
+
+      const listContent = rows
+        .map(r => `file '${r.hash}.ogg'`)
+        .join('\n');
+      writeFileSync(listPath, listContent);
+
+      const execFileAsync = promisify(execFile);
+      try {
+        await execFileAsync('ffmpeg', [
+          '-f', 'concat', '-safe', '0',
+          '-i', listPath,
+          '-c', 'copy',
+          outPath,
+        ]);
+      } catch {
+        unlinkSync(listPath);
+        try { unlinkSync(outPath); } catch {}
+        return reply.status(500).send({ error: 'Failed to merge audio' });
+      }
+
+      unlinkSync(listPath);
+
+      const safeTitle = book.title.replace(/[^a-zA-Z0-9 _-]/g, '').trim() || 'audiobook';
+      const stream = createReadStream(outPath);
+      stream.on('end', () => { try { unlinkSync(outPath); } catch {} });
+
+      return reply
+        .header('Content-Type', 'audio/ogg')
+        .header('Content-Disposition', `attachment; filename="${safeTitle}.ogg"`)
+        .send(stream);
     },
   );
 }

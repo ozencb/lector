@@ -139,14 +139,125 @@
   }
 }
 
+.downloadBtn {
+  background: none;
+  border: none;
+  color: var(--color-accent);
+  font-size: 0.75rem;
+  font-weight: 500;
+  cursor: pointer;
+  padding: 2px 6px;
+  border-radius: var(--radius-sm);
+  transition: background var(--transition);
+
+  &:hover {
+    background: var(--color-accent-subtle);
+  }
+}
+
+.downloadCell {
+  white-space: nowrap;
+}
+
+.dialogOverlay {
+  position: fixed;
+  inset: 0;
+  background: var(--color-overlay);
+  z-index: 200;
+  animation: fadeIn 150ms ease;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.dialogContent {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: var(--color-surface-raised);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: 20px;
+  max-width: 340px;
+  width: 90%;
+  z-index: 201;
+  box-shadow: 0 16px 48px var(--color-shadow);
+  animation: dialogIn 200ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes dialogIn {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -48%);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, -50%);
+  }
+}
+
+.dialogTitle {
+  font-size: 0.875rem;
+  font-weight: 600;
+  margin: 0 0 6px;
+  letter-spacing: -0.01em;
+}
+
+.dialogDescription {
+  font-size: 0.8125rem;
+  color: var(--color-text-muted);
+  margin: 0 0 16px;
+}
+
+.dialogActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.dialogCancel,
+.dialogConfirm {
+  padding: 6px 14px;
+  border-radius: var(--radius-sm);
+  font-size: 0.8125rem;
+  font-weight: 500;
+  cursor: pointer;
+  border: none;
+  transition: background var(--transition), opacity var(--transition);
+}
+
+.dialogCancel {
+  background: var(--color-surface-hover);
+  color: var(--color-text);
+
+  &:hover {
+    background: var(--color-border-strong);
+  }
+}
+
+.dialogConfirm {
+  background: var(--color-accent);
+  color: white;
+
+  &:hover {
+    opacity: 0.9;
+  }
+}
+
 @media (max-width: 768px) {
   .sizeCell,
-  .actionsCell {
+  .actionsCell,
+  .downloadCell {
     display: none;
   }
 
+  .table th:nth-child(3),
   .table th:nth-child(4),
-  .table th:nth-child(6) {
+  .table th:nth-child(7),
+  .table th:nth-child(8) {
     display: none;
   }
 

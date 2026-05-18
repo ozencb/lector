@@ -233,7 +233,8 @@
 }
 
 .dialogCancel,
-.dialogDelete {
+.dialogDelete,
+.dialogConfirm {
   padding: 6px 14px;
   border-radius: var(--radius-sm);
   font-size: 0.8125rem;
@@ -254,6 +255,15 @@
 
 .dialogDelete {
   background: var(--color-danger);
+  color: white;
+
+  &:hover {
+    opacity: 0.9;
+  }
+}
+
+.dialogConfirm {
+  background: var(--color-accent);
   color: white;
 
   &:hover {

@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import type { Book } from '@tts-reader/shared';
-import { getTtsStatus, regenerateBookAudio, prioritizeBookAudio } from '../services/api.js';
+import { getTtsStatus, regenerateBookAudio, prioritizeBookAudio, getDownloadAudioUrl } from '../services/api.js';
+import * as AlertDialog from '@radix-ui/react-alert-dialog';
 import styles from './BookTable.module.scss';
 
 interface BookTableProps {
@@ -68,6 +69,60 @@ function TtsCell({ book, onRetry }: { book: Book; onRetry?: (id: string) => void
   }
 }
 
+function DownloadCell({ book }: { book: Book }) {
+  const [confirmOpen, setConfirmOpen] = useState(false);
+
+  if (book.ttsStatus === 'pending') return null;
+
+  const handleDownload = () => {
+    const a = document.createElement('a');
+    a.href = getDownloadAudioUrl(book.id);
+    a.download = '';
+    a.click();
+  };
+
+  return (
+    <>
+      <button
+        className={styles.downloadBtn}
+        onClick={(e) => {
+          e.stopPropagation();
+          if (book.ttsStatus === 'completed') {
+            handleDownload();
+          } else {
+            setConfirmOpen(true);
+          }
+        }}
+      >
+        Download
+      </button>
+      <AlertDialog.Root open={confirmOpen} onOpenChange={setConfirmOpen}>
+        <AlertDialog.Portal>
+          <AlertDialog.Overlay className={styles.dialogOverlay} />
+          <AlertDialog.Content className={styles.dialogContent} onClick={(e) => e.stopPropagation()}>
+            <AlertDialog.Title className={styles.dialogTitle}>
+              Download incomplete audio?
+            </AlertDialog.Title>
+            <AlertDialog.Description className={styles.dialogDescription}>
+              Audio generation is still in progress. The download will only include what's been generated so far.
+            </AlertDialog.Description>
+            <div className={styles.dialogActions}>
+              <AlertDialog.Cancel asChild>
+                <button className={styles.dialogCancel}>Cancel</button>
+              </AlertDialog.Cancel>
+              <AlertDialog.Action asChild>
+                <button className={styles.dialogConfirm} onClick={handleDownload}>
+                  Download
+                </button>
+              </AlertDialog.Action>
+            </div>
+          </AlertDialog.Content>
+        </AlertDialog.Portal>
+      </AlertDialog.Root>
+    </>
+  );
+}
+
 export default function BookTable({ books, onDelete, onRetry, onPrioritize }: BookTableProps) {
   const navigate = useNavigate();
 
@@ -82,6 +137,7 @@ export default function BookTable({ books, onDelete, onRetry, onPrioritize }: Bo
             <th>Audio Size</th>
             <th>Audio</th>
             <th>Progress</th>
+            <th></th>
             <th></th>
           </tr>
         </thead>
@@ -99,6 +155,9 @@ export default function BookTable({ books, onDelete, onRetry, onPrioritize }: Bo
                 </td>
                 <td className={styles.progressCell}>
                   {pct > 0 ? `${pct}%` : '—'}
+                </td>
+                <td className={styles.downloadCell}>
+                  <DownloadCell book={book} />
                 </td>
                 <td className={styles.actionsCell}>
                   {book.ttsStatus === 'pending' && (
