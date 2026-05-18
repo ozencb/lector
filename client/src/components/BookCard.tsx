@@ -37,12 +37,25 @@ export default function BookCard({ book, onDelete, onRetry, onPrioritize }: Book
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [infoOpen, setInfoOpen] = useState(false);
   const [downloadConfirmOpen, setDownloadConfirmOpen] = useState(false);
+  const [downloading, setDownloading] = useState(false);
 
-  const handleDownload = () => {
-    const a = document.createElement('a');
-    a.href = getDownloadAudioUrl(book.id);
-    a.download = '';
-    a.click();
+  const handleDownload = async () => {
+    setDownloading(true);
+    try {
+      const res = await fetch(getDownloadAudioUrl(book.id));
+      if (!res.ok) throw new Error();
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = '';
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch {
+      // download failed silently
+    } finally {
+      setDownloading(false);
+    }
   };
   const [ttsCompleted, setTtsCompleted] = useState(0);
   const [ttsTotal, setTtsTotal] = useState(0);
@@ -166,7 +179,9 @@ export default function BookCard({ book, onDelete, onRetry, onPrioritize }: Book
                 <ContextMenu.Separator className={styles.contextMenuSeparator} />
                 <ContextMenu.Item
                   className={styles.contextMenuItemDefault}
+                  disabled={downloading}
                   onSelect={() => {
+                    if (downloading) return;
                     if (ttsStatus === 'completed') {
                       handleDownload();
                     } else {
@@ -174,7 +189,7 @@ export default function BookCard({ book, onDelete, onRetry, onPrioritize }: Book
                     }
                   }}
                 >
-                  Download Audio
+                  {downloading ? 'Downloading…' : 'Download Audio'}
                 </ContextMenu.Item>
               </>
             )}
@@ -287,14 +302,19 @@ export default function BookCard({ book, onDelete, onRetry, onPrioritize }: Book
             </AlertDialog.Description>
             <div className={styles.dialogActions}>
               <AlertDialog.Cancel asChild>
-                <button className={styles.dialogCancel}>Cancel</button>
+                <button className={styles.dialogCancel} disabled={downloading}>Cancel</button>
               </AlertDialog.Cancel>
               <AlertDialog.Action asChild>
                 <button
                   className={styles.dialogConfirm}
-                  onClick={handleDownload}
+                  disabled={downloading}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    handleDownload().then(() => setDownloadConfirmOpen(false));
+                  }}
                 >
-                  Download
+                  {downloading && <span className={styles.spinner} />}
+                  {downloading ? 'Downloading…' : 'Download'}
                 </button>
               </AlertDialog.Action>
             </div>

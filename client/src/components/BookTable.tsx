@@ -71,22 +71,37 @@ function TtsCell({ book, onRetry }: { book: Book; onRetry?: (id: string) => void
 
 function DownloadCell({ book }: { book: Book }) {
   const [confirmOpen, setConfirmOpen] = useState(false);
+  const [downloading, setDownloading] = useState(false);
 
   if (book.ttsStatus === 'pending') return null;
 
-  const handleDownload = () => {
-    const a = document.createElement('a');
-    a.href = getDownloadAudioUrl(book.id);
-    a.download = '';
-    a.click();
+  const handleDownload = async () => {
+    setDownloading(true);
+    try {
+      const res = await fetch(getDownloadAudioUrl(book.id));
+      if (!res.ok) throw new Error();
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = '';
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch {
+      // download failed silently
+    } finally {
+      setDownloading(false);
+    }
   };
 
   return (
     <>
       <button
         className={styles.downloadBtn}
+        disabled={downloading}
         onClick={(e) => {
           e.stopPropagation();
+          if (downloading) return;
           if (book.ttsStatus === 'completed') {
             handleDownload();
           } else {
@@ -94,7 +109,8 @@ function DownloadCell({ book }: { book: Book }) {
           }
         }}
       >
-        Download
+        {downloading && <span className={styles.spinner} />}
+        {downloading ? 'Downloading…' : 'Download'}
       </button>
       <AlertDialog.Root open={confirmOpen} onOpenChange={setConfirmOpen}>
         <AlertDialog.Portal>
@@ -108,11 +124,19 @@ function DownloadCell({ book }: { book: Book }) {
             </AlertDialog.Description>
             <div className={styles.dialogActions}>
               <AlertDialog.Cancel asChild>
-                <button className={styles.dialogCancel}>Cancel</button>
+                <button className={styles.dialogCancel} disabled={downloading}>Cancel</button>
               </AlertDialog.Cancel>
               <AlertDialog.Action asChild>
-                <button className={styles.dialogConfirm} onClick={handleDownload}>
-                  Download
+                <button
+                  className={styles.dialogConfirm}
+                  disabled={downloading}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    handleDownload().then(() => setConfirmOpen(false));
+                  }}
+                >
+                  {downloading && <span className={styles.spinner} />}
+                  {downloading ? 'Downloading…' : 'Download'}
                 </button>
               </AlertDialog.Action>
             </div>
