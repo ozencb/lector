@@ -304,7 +304,7 @@ export default function BookCard({ book, onDelete, onRetry, onPrioritize }: Book
       <Dialog.Root open={downloadDialogOpen} onOpenChange={(open) => { if (!downloading) setDownloadDialogOpen(open); }}>
         <Dialog.Portal>
           <Dialog.Overlay className={styles.dialogOverlay} />
-          <Dialog.Content className={styles.dialogContent}>
+          <Dialog.Content className={styles.dialogContent} onInteractOutside={(e) => { if (downloading) e.preventDefault(); }}>
             <Dialog.Title className={styles.dialogTitle}>
               Download Audio
             </Dialog.Title>

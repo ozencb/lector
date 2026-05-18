@@ -127,7 +127,7 @@ function DownloadCell({ book }: { book: Book }) {
       <Dialog.Root open={dialogOpen} onOpenChange={(open) => { if (!downloading) setDialogOpen(open); }}>
         <Dialog.Portal>
           <Dialog.Overlay className={styles.dialogOverlay} />
-          <Dialog.Content className={styles.dialogContent} onClick={(e) => e.stopPropagation()}>
+          <Dialog.Content className={styles.dialogContent} onClick={(e) => e.stopPropagation()} onInteractOutside={(e) => { if (downloading) e.preventDefault(); }}>
             <Dialog.Title className={styles.dialogTitle}>
               Download Audio
             </Dialog.Title>
